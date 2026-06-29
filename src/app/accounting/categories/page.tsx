@@ -5,8 +5,11 @@ import { createClient } from "@/lib/supabase/client";
 import type { ExpenseCategory, ExpenseTopic } from "@/types";
 
 const COLORS = [
-  "#3b82f6", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6",
-  "#06b6d4", "#ec4899", "#84cc16", "#f97316", "#6366f1",
+  "#3b82f6", "#2563eb", "#1d4ed8", "#06b6d4", "#0891b2",
+  "#10b981", "#059669", "#84cc16", "#65a30d", "#eab308",
+  "#f59e0b", "#f97316", "#ea580c", "#ef4444", "#dc2626",
+  "#ec4899", "#db2777", "#8b5cf6", "#7c3aed", "#6366f1",
+  "#64748b", "#475569", "#0f172a", "#92400e", "#78350f",
 ];
 
 export default function CategoriesPage() {
