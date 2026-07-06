@@ -18,6 +18,8 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
   const [transferSlip, setTransferSlip] = useState<File | null>(null);
   const [selectedCategory, setSelectedCategory] = useState(request.category_id || "");
   const [showTransferForm, setShowTransferForm] = useState(false);
+  const [showAddSlipForm, setShowAddSlipForm] = useState(false);
+  const [additionalSlips, setAdditionalSlips] = useState<File[]>([]);
   const [error, setError] = useState("");
 
   if (["transferred", "rejected"].includes(request.status)) return null;
@@ -97,6 +99,51 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
     setLoading(false);
   }
 
+  async function handleAddSlips() {
+    if (additionalSlips.length === 0) {
+      setError("กรุณาเลือกรูปสลิปที่ต้องการแนบเพิ่ม");
+      return;
+    }
+    setLoading(true);
+    setError("");
+    const supabase = createClient();
+
+    const newUrls: string[] = [];
+    for (const file of additionalSlips) {
+      const ext = file.name.split(".").pop();
+      const fileName = `additional/${request.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("expense-slips")
+        .upload(fileName, file);
+
+      if (uploadError) {
+        setError("อัปโหลดสลิปไม่สำเร็จ: " + uploadError.message);
+        setLoading(false);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("expense-slips")
+        .getPublicUrl(fileName);
+      newUrls.push(publicUrl);
+    }
+
+    const { error: err } = await supabase
+      .from("expense_requests")
+      .update({ slip_urls: [...(request.slip_urls || []), ...newUrls] })
+      .eq("id", request.id);
+
+    if (err) {
+      setError(err.message);
+      setLoading(false);
+      return;
+    }
+    setAdditionalSlips([]);
+    setShowAddSlipForm(false);
+    router.refresh();
+    setLoading(false);
+  }
+
   return (
     <div className="card p-5 space-y-4">
       <h3 className="font-semibold text-slate-900">จัดการรายการ</h3>
@@ -125,8 +172,18 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
       </div>
 
       {/* Status Actions */}
-      {!showTransferForm && (
+      {!showTransferForm && !showAddSlipForm && (
         <div className="flex flex-wrap gap-3">
+          <button
+            onClick={() => setShowAddSlipForm(true)}
+            disabled={loading}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+            </svg>
+            แนบสลิปเพิ่มเติม
+          </button>
           {request.status === "pending" && (
             <button
               onClick={() => updateStatus("reviewing")}
@@ -179,6 +236,35 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
         </div>
       )}
 
+      {/* Add Slip Form */}
+      {showAddSlipForm && (
+        <div className="border border-blue-200 rounded-lg p-4 bg-blue-50 space-y-4">
+          <h4 className="font-medium text-blue-900">แนบสลิปเพิ่มเติมให้พนักงาน</h4>
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              สลิป / คำสั่งซื้อ / เอกสารอื่นๆ <span className="text-red-500">*</span>
+            </label>
+            <ImageUpload onUpload={setAdditionalSlips} label="แนบรูปสลิปเพิ่มเติม" multiple />
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={() => { setShowAddSlipForm(false); setAdditionalSlips([]); setError(""); }}
+              className="btn-secondary flex-1"
+              disabled={loading}
+            >
+              ยกเลิก
+            </button>
+            <button
+              onClick={handleAddSlips}
+              disabled={loading}
+              className="btn-primary flex-1 disabled:opacity-50"
+            >
+              {loading ? "กำลังบันทึก..." : "บันทึกสลิปเพิ่มเติม"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Transfer Form */}
       {showTransferForm && (
         <div className="border border-emerald-200 rounded-lg p-4 bg-emerald-50 space-y-4">
@@ -187,7 +273,7 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
             <label className="block text-sm font-medium text-slate-700 mb-1">
               สลิปการโอน <span className="text-red-500">*</span>
             </label>
-            <ImageUpload onUpload={setTransferSlip} label="แนบสลิปการโอนเงินคืน" />
+            <ImageUpload onUpload={(files) => setTransferSlip(files[0] || null)} label="แนบสลิปการโอนเงินคืน" />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">หมายเหตุการโอน</label>

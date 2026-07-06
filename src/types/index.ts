@@ -43,7 +43,7 @@ export interface ExpenseRequest {
   category?: ExpenseCategory;
   amount: number;
   expense_date: string;
-  slip_url?: string;
+  slip_urls?: string[];
   notes?: string;
   status: ExpenseStatus;
   reviewed_by?: string;

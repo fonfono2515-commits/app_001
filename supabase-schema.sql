@@ -61,7 +61,7 @@ CREATE TABLE IF NOT EXISTS public.expense_requests (
   category_id UUID REFERENCES public.expense_categories(id) ON DELETE SET NULL,
   amount NUMERIC(12, 2) NOT NULL CHECK (amount > 0),
   expense_date DATE NOT NULL,
-  slip_url TEXT,
+  slip_urls TEXT[],
   notes TEXT,
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending', 'reviewing', 'approved', 'transferred', 'rejected')),

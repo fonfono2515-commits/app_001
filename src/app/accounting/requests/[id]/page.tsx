@@ -92,17 +92,21 @@ export default async function AccountingRequestDetail({
         )}
       </div>
 
-      {request.slip_url && (
+      {request.slip_urls && request.slip_urls.length > 0 && (
         <div className="card p-5">
           <h3 className="font-semibold text-slate-900 mb-3">สลิปที่แนบ (พนักงาน)</h3>
-          <a href={request.slip_url} target="_blank" rel="noopener noreferrer">
-            <img
-              src={request.slip_url}
-              alt="expense slip"
-              className="rounded-lg max-h-80 object-contain w-full cursor-zoom-in hover:opacity-90 transition-opacity"
-            />
-          </a>
-          <p className="text-xs text-slate-400 mt-2 text-center">คลิกเพื่อดูขนาดเต็ม</p>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {request.slip_urls.map((url, i) => (
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                <img
+                  src={url}
+                  alt={`expense slip ${i + 1}`}
+                  className="rounded-lg max-h-48 object-contain w-full cursor-zoom-in hover:opacity-90 transition-opacity"
+                />
+              </a>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 mt-2 text-center">คลิกที่รูปเพื่อดูขนาดเต็ม</p>
         </div>
       )}
 

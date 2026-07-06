@@ -12,7 +12,7 @@ export default function CreateExpensePage() {
   const [error, setError] = useState("");
   const [topics, setTopics] = useState<ExpenseTopic[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
-  const [slipFile, setSlipFile] = useState<File | null>(null);
+  const [slipFiles, setSlipFiles] = useState<File[]>([]);
 
   const [form, setForm] = useState({
     title: "",
@@ -47,7 +47,7 @@ export default function CreateExpensePage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!slipFile) {
+    if (slipFiles.length === 0) {
       setError("กรุณาอัปโหลดสลิปการโอน");
       return;
     }
@@ -61,21 +61,25 @@ export default function CreateExpensePage() {
 
     if (!user) return;
 
-    const ext = slipFile.name.split(".").pop();
-    const fileName = `${user.id}/${Date.now()}.${ext}`;
-    const { error: uploadError, data: uploadData } = await supabase.storage
-      .from("expense-slips")
-      .upload(fileName, slipFile);
+    const publicUrls: string[] = [];
+    for (const slipFile of slipFiles) {
+      const ext = slipFile.name.split(".").pop();
+      const fileName = `${user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("expense-slips")
+        .upload(fileName, slipFile);
 
-    if (uploadError) {
-      setError("อัปโหลดรูปไม่สำเร็จ: " + uploadError.message);
-      setLoading(false);
-      return;
+      if (uploadError) {
+        setError("อัปโหลดรูปไม่สำเร็จ: " + uploadError.message);
+        setLoading(false);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("expense-slips")
+        .getPublicUrl(fileName);
+      publicUrls.push(publicUrl);
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from("expense-slips")
-      .getPublicUrl(fileName);
 
     const { error: insertError } = await supabase.from("expense_requests").insert({
       employee_id: user.id,
@@ -84,7 +88,7 @@ export default function CreateExpensePage() {
       category_id: form.category_id || null,
       amount: parseFloat(form.amount),
       expense_date: form.expense_date,
-      slip_url: publicUrl,
+      slip_urls: publicUrls,
       notes: form.notes || null,
       status: "pending",
     });
@@ -199,7 +203,7 @@ export default function CreateExpensePage() {
           <label className="block text-sm font-medium text-slate-700 mb-1">
             สลิปการโอน <span className="text-red-500">*</span>
           </label>
-          <ImageUpload onUpload={setSlipFile} label="อัปโหลดรูปสลิปการโอน" />
+          <ImageUpload onUpload={setSlipFiles} label="อัปโหลดรูปสลิปการโอน (แนบได้หลายรูป)" multiple />
         </div>
 
         <div>

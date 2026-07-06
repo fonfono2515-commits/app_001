@@ -76,16 +76,21 @@ export default async function EmployeeRequestDetail({
         )}
       </div>
 
-      {request.slip_url && (
+      {request.slip_urls && request.slip_urls.length > 0 && (
         <div className="card p-6">
           <h3 className="font-semibold text-slate-900 mb-3">สลิปที่แนบ</h3>
-          <Image
-            src={request.slip_url}
-            alt="expense slip"
-            width={500}
-            height={300}
-            className="rounded-lg w-full object-contain max-h-64"
-          />
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {request.slip_urls.map((url, i) => (
+              <Image
+                key={i}
+                src={url}
+                alt={`expense slip ${i + 1}`}
+                width={300}
+                height={200}
+                className="rounded-lg w-full object-contain max-h-40"
+              />
+            ))}
+          </div>
         </div>
       )}
 
