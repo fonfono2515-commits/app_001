@@ -201,9 +201,9 @@ export default function CreateExpensePage() {
 
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
-            สลิปการโอน <span className="text-red-500">*</span>
+            สลิปหรือคำสั่งซื้อ <span className="text-red-500">*</span>
           </label>
-          <ImageUpload onUpload={setSlipFiles} label="อัปโหลดรูปสลิปการโอน (แนบได้หลายรูป)" multiple />
+          <ImageUpload onUpload={setSlipFiles} label="อัปโหลดสลิปหรือคำสั่งซื้อ (แนบได้หลายรูป)" multiple />
         </div>
 
         <div>

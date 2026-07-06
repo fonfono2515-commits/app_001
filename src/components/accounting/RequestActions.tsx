@@ -22,7 +22,7 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [transferNote, setTransferNote] = useState("");
-  const [transferSlip, setTransferSlip] = useState<File | null>(null);
+  const [transferSlips, setTransferSlips] = useState<File[]>([]);
   const [showTransferForm, setShowTransferForm] = useState(false);
   const [error, setError] = useState("");
 
@@ -82,8 +82,8 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
   }
 
   async function handleTransfer() {
-    if (!transferSlip) {
-      setError("กรุณาแนบสลิปการโอน");
+    if (transferSlips.length === 0) {
+      setError("กรุณาแนบสลิปการโอนอย่างน้อย 1 รูป");
       return;
     }
     setLoading(true);
@@ -91,27 +91,31 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    const ext = transferSlip.name.split(".").pop();
-    const fileName = `transfers/${request.id}/${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage
-      .from("expense-slips")
-      .upload(fileName, transferSlip);
+    const publicUrls: string[] = [];
+    for (const slip of transferSlips) {
+      const ext = slip.name.split(".").pop();
+      const fileName = `transfers/${request.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      const { error: uploadError } = await supabase.storage
+        .from("expense-slips")
+        .upload(fileName, slip);
 
-    if (uploadError) {
-      setError("อัปโหลดสลิปไม่สำเร็จ: " + uploadError.message);
-      setLoading(false);
-      return;
+      if (uploadError) {
+        setError("อัปโหลดสลิปไม่สำเร็จ: " + uploadError.message);
+        setLoading(false);
+        return;
+      }
+
+      const { data: { publicUrl } } = supabase.storage
+        .from("expense-slips")
+        .getPublicUrl(fileName);
+      publicUrls.push(publicUrl);
     }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from("expense-slips")
-      .getPublicUrl(fileName);
 
     const { error: err } = await supabase
       .from("expense_requests")
       .update({
         status: "transferred",
-        transfer_slip_url: publicUrl,
+        transfer_slip_urls: publicUrls,
         transferred_at: new Date().toISOString(),
         transferred_by: user?.id,
         transfer_note: transferNote || null,
@@ -400,7 +404,7 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
             <label className="block text-sm font-medium text-slate-700 mb-1">
               สลิปการโอน <span className="text-red-500">*</span>
             </label>
-            <ImageUpload onUpload={(files) => setTransferSlip(files[0] || null)} label="แนบสลิปการโอนเงินคืน" />
+            <ImageUpload onUpload={setTransferSlips} label="แนบสลิปการโอนเงินคืน (แนบได้หลายรูป)" multiple />
           </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">หมายเหตุการโอน</label>

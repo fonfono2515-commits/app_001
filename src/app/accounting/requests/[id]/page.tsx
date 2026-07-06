@@ -111,7 +111,7 @@ export default async function AccountingRequestDetail({
         </div>
       )}
 
-      {request.status === "transferred" && request.transfer_slip_url && (
+      {request.status === "transferred" && request.transfer_slip_urls && request.transfer_slip_urls.length > 0 && (
         <div className="card p-5 border-emerald-200">
           <h3 className="font-semibold text-emerald-900 mb-3">หลักฐานการโอนคืน</h3>
           <div className="text-sm text-slate-600 mb-3 space-y-1">
@@ -119,13 +119,18 @@ export default async function AccountingRequestDetail({
             <p>วันที่: {request.transferred_at ? formatDateTime(request.transferred_at) : "-"}</p>
             {request.transfer_note && <p>หมายเหตุ: {request.transfer_note}</p>}
           </div>
-          <a href={request.transfer_slip_url} target="_blank" rel="noopener noreferrer">
-            <img
-              src={request.transfer_slip_url}
-              alt="transfer slip"
-              className="rounded-lg max-h-80 object-contain w-full cursor-zoom-in hover:opacity-90 transition-opacity"
-            />
-          </a>
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {request.transfer_slip_urls.map((url, i) => (
+              <a key={i} href={url} target="_blank" rel="noopener noreferrer">
+                <img
+                  src={url}
+                  alt={`transfer slip ${i + 1}`}
+                  className="rounded-lg max-h-48 object-contain w-full cursor-zoom-in hover:opacity-90 transition-opacity"
+                />
+              </a>
+            ))}
+          </div>
+          <p className="text-xs text-slate-400 mt-2 text-center">คลิกที่รูปเพื่อดูขนาดเต็ม</p>
         </div>
       )}
 

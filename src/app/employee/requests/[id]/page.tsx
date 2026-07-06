@@ -107,16 +107,21 @@ export default async function EmployeeRequestDetail({
             <p>วันที่โอน: {request.transferred_at ? formatDateTime(request.transferred_at) : "-"}</p>
             {request.transfer_note && <p>หมายเหตุ: {request.transfer_note}</p>}
           </div>
-          {request.transfer_slip_url && (
+          {request.transfer_slip_urls && request.transfer_slip_urls.length > 0 && (
             <div className="mt-4">
               <p className="text-sm font-medium text-emerald-900 mb-2">สลิปการโอนคืน</p>
-              <Image
-                src={request.transfer_slip_url}
-                alt="transfer slip"
-                width={500}
-                height={300}
-                className="rounded-lg w-full object-contain max-h-64"
-              />
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {request.transfer_slip_urls.map((url, i) => (
+                  <Image
+                    key={i}
+                    src={url}
+                    alt={`transfer slip ${i + 1}`}
+                    width={300}
+                    height={200}
+                    className="rounded-lg w-full object-contain max-h-40"
+                  />
+                ))}
+              </div>
             </div>
           )}
         </div>

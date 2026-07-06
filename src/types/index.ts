@@ -49,7 +49,7 @@ export interface ExpenseRequest {
   reviewed_by?: string;
   reviewer?: Profile;
   reviewed_at?: string;
-  transfer_slip_url?: string;
+  transfer_slip_urls?: string[];
   transferred_at?: string;
   transferred_by?: string;
   transferrer?: Profile;

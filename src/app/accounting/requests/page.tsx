@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import * as XLSX from "xlsx-js-style";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, formatCurrency, formatMonthYear } from "@/lib/utils";
@@ -67,48 +68,72 @@ export default function AccountingRequestsPage() {
 
   const totalAmount = requests.reduce((s, r) => s + r.amount, 0);
 
-  function escapeHtml(value: string) {
-    return value
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
-  }
-
   function exportToExcel() {
     const oldestFirst = [...requests].reverse();
     const monthTitle = `สรุปข้อมูลสำรองจ่ายประจำเดือน ${formatMonthYear(new Date())}`;
-    const headerCells = ["ลำดับ", "วันที่", "พนักงาน", "รายการ", "ประเภทค่าใช้จ่าย", "จำนวนเงินรวม"];
 
-    const titleRow = `<tr><td colspan="6" style="font-weight:bold;font-size:14pt;">${escapeHtml(monthTitle)}</td></tr>`;
-    const headerRow = `<tr>${headerCells.map((h) => `<th style="background-color:#e2e8f0;font-weight:bold;">${escapeHtml(h)}</th>`).join("")}</tr>`;
+    const employeePalette = [
+      "DC2626", "2563EB", "16A34A", "D97706", "9333EA",
+      "0891B2", "DB2777", "65A30D", "EA580C", "7C3AED",
+    ];
+    const uniqueEmployees = [...new Set(oldestFirst.map((r) => r.employee?.full_name || ""))];
+    const employeeColorMap: Record<string, string> = {};
+    uniqueEmployees.forEach((name, idx) => {
+      employeeColorMap[name] = employeePalette[idx % employeePalette.length];
+    });
 
-    const dataRows = oldestFirst
-      .map((r, i) => {
-        const bg = r.status === "transferred" ? ' style="background-color:#fecaca;"' : "";
+    const wb = XLSX.utils.book_new();
+    const wsData: (string | number)[][] = [
+      [monthTitle, "", "", "", "", ""],
+      ["ลำดับ", "วันที่", "พนักงาน", "รายการ", "ประเภทค่าใช้จ่าย", "จำนวนเงินรวม"],
+      ...oldestFirst.map((r, i) => {
         const date = r.transferred_at ? formatDate(r.transferred_at) : formatDate(r.expense_date);
-        return `<tr${bg}>
-          <td>${i + 1}</td>
-          <td>${escapeHtml(date)}</td>
-          <td>${escapeHtml(r.employee?.full_name || "")}</td>
-          <td>${escapeHtml(r.title)}</td>
-          <td>${escapeHtml(r.category?.name || "")}</td>
-          <td style="text-align:right;">${r.amount}</td>
-        </tr>`;
-      })
-      .join("");
+        return [i + 1, date, r.employee?.full_name || "", r.title, r.category?.name || "", r.amount];
+      }),
+      ["", "", "", "", "รวมทั้งสิ้น", totalAmount],
+    ];
 
-    const summaryRow = `<tr><td colspan="4"></td><td style="font-weight:bold;">รวมทั้งสิ้น</td><td style="font-weight:bold;text-align:right;">${totalAmount}</td></tr>`;
+    const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    const html = `<html><head><meta charset="utf-8"></head><body><table border="1">${titleRow}${headerRow}${dataRows}${summaryRow}</table></body></html>`;
+    const purpleFill = { patternType: "solid", fgColor: { rgb: "EDE9FE" } };
+    const headerFill = { patternType: "solid", fgColor: { rgb: "E2E8F0" } };
+    const border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
+    const cols = ["A", "B", "C", "D", "E", "F"];
 
-    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `รายงานสำรองจ่าย_${formatDate(new Date())}.xls`;
-    a.click();
-    URL.revokeObjectURL(url);
+    const titleCell = ws["A1"];
+    if (titleCell) titleCell.s = { font: { bold: true, sz: 14, color: { rgb: "1D4ED8" } } };
+
+    cols.forEach((c) => {
+      const cell = ws[`${c}2`];
+      if (cell) cell.s = { fill: headerFill, font: { bold: true }, border, alignment: { horizontal: "center" } };
+    });
+
+    oldestFirst.forEach((r, i) => {
+      const row = i + 3;
+      const empName = r.employee?.full_name || "";
+      const empColor = employeeColorMap[empName];
+      const isTransferred = r.status === "transferred";
+
+      cols.forEach((c) => {
+        const cell = ws[`${c}${row}`];
+        if (!cell) return;
+        cell.s = c === "C"
+          ? { font: { bold: true, color: { rgb: empColor } }, ...(isTransferred ? { fill: purpleFill } : {}), border }
+          : { ...(isTransferred ? { fill: purpleFill } : {}), border };
+      });
+    });
+
+    const summaryRow = oldestFirst.length + 3;
+    cols.forEach((c) => {
+      const cell = ws[`${c}${summaryRow}`];
+      if (cell) cell.s = { font: { bold: true }, border };
+    });
+
+    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 20 }, { wch: 14 }];
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+
+    XLSX.utils.book_append_sheet(wb, ws, "รายงาน");
+    XLSX.writeFile(wb, `รายงานสำรองจ่าย_${formatDate(new Date())}.xlsx`);
   }
 
   return (
@@ -214,7 +239,7 @@ export default function AccountingRequestsPage() {
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {requests.map((req) => (
-                  <tr key={req.id} className="hover:bg-slate-50 transition-colors">
+                  <tr key={req.id} className={`transition-colors ${req.status === "transferred" ? "bg-violet-50 hover:bg-violet-100" : "hover:bg-slate-50"}`}>
                     <td className="px-4 py-3">
                       <p className="font-medium text-slate-900">{req.title}</p>
                       <p className="text-xs text-slate-500">{req.topic?.name}</p>
