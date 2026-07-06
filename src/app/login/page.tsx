@@ -57,7 +57,7 @@ export default function LoginPage() {
                 />
               </svg>
             </div>
-            <h1 className="text-2xl font-bold text-slate-900">ระบบสำรองจ่าย</h1>
+            <h1 className="text-2xl font-bold text-slate-900">สำรอง (TR&amp;ODF)</h1>
             <p className="text-slate-500 mt-1 text-sm">กรุณาเข้าสู่ระบบเพื่อดำเนินการต่อ</p>
           </div>
 
