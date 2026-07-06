@@ -46,7 +46,7 @@ export function Navbar({ profile }: NavbarProps) {
                   />
                 </svg>
               </div>
-              <span className="font-semibold text-slate-900">สำรอง (TR&amp;ODF)</span>
+              <span className="font-semibold text-slate-900">Advance (TR&amp;ODF)</span>
             </div>
             <div className="hidden md:flex items-center gap-1">
               {links.map((link) => (
