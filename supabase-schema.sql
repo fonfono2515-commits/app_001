@@ -67,7 +67,7 @@ CREATE TABLE IF NOT EXISTS public.expense_requests (
     CHECK (status IN ('pending', 'reviewing', 'approved', 'transferred', 'rejected')),
   reviewed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   reviewed_at TIMESTAMPTZ,
-  transfer_slip_url TEXT,
+  transfer_slip_urls TEXT[],
   transferred_at TIMESTAMPTZ,
   transferred_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   transfer_note TEXT,

@@ -76,7 +76,7 @@ export default function AccountingRequestsPage() {
       "DC2626", "2563EB", "16A34A", "D97706", "9333EA",
       "0891B2", "DB2777", "65A30D", "EA580C", "7C3AED",
     ];
-    const uniqueEmployees = [...new Set(oldestFirst.map((r) => r.employee?.full_name || ""))];
+    const uniqueEmployees = Array.from(new Set(oldestFirst.map((r) => r.employee?.full_name || "")));
     const employeeColorMap: Record<string, string> = {};
     uniqueEmployees.forEach((name, idx) => {
       employeeColorMap[name] = employeePalette[idx % employeePalette.length];
