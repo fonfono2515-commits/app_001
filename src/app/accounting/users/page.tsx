@@ -20,6 +20,9 @@ export default function UsersPage() {
     role: "employee" as UserRole,
   });
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState({ full_name: "", department: "" });
+
   async function load() {
     const supabase = createClient();
     const { data } = await supabase
@@ -61,6 +64,22 @@ export default function UsersPage() {
   async function updateRole(userId: string, role: UserRole) {
     const supabase = createClient();
     await supabase.from("profiles").update({ role }).eq("id", userId);
+    await load();
+  }
+
+  function startEdit(u: Profile) {
+    setEditingId(u.id);
+    setEditForm({ full_name: u.full_name, department: u.department || "" });
+  }
+
+  async function saveEdit(userId: string) {
+    if (!editForm.full_name.trim()) return;
+    const supabase = createClient();
+    await supabase
+      .from("profiles")
+      .update({ full_name: editForm.full_name.trim(), department: editForm.department || null })
+      .eq("id", userId);
+    setEditingId(null);
     await load();
   }
 
@@ -156,29 +175,81 @@ export default function UsersPage() {
                   <th className="text-left px-4 py-3 text-slate-600 font-medium">แผนก</th>
                   <th className="text-left px-4 py-3 text-slate-600 font-medium">บทบาท</th>
                   <th className="text-left px-4 py-3 text-slate-600 font-medium">สร้างเมื่อ</th>
+                  <th className="px-4 py-3"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {users.map((u) => (
                   <tr key={u.id} className="hover:bg-slate-50">
-                    <td className="px-4 py-3 font-medium text-slate-900">{u.full_name}</td>
-                    <td className="px-4 py-3 text-slate-600">{u.email}</td>
-                    <td className="px-4 py-3 text-slate-600">{u.department || "-"}</td>
-                    <td className="px-4 py-3">
-                      <select
-                        value={u.role}
-                        onChange={(e) => updateRole(u.id, e.target.value as UserRole)}
-                        className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer ${
-                          u.role === "accounting"
-                            ? "bg-purple-100 text-purple-800"
-                            : "bg-blue-100 text-blue-800"
-                        }`}
-                      >
-                        <option value="employee">พนักงาน</option>
-                        <option value="accounting">ฝ่ายบัญชี</option>
-                      </select>
-                    </td>
-                    <td className="px-4 py-3 text-slate-500">{formatDateTime(u.created_at)}</td>
+                    {editingId === u.id ? (
+                      <>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            value={editForm.full_name}
+                            onChange={(e) => setEditForm((f) => ({ ...f, full_name: e.target.value }))}
+                            className="input-field text-sm py-1"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-slate-600">{u.email}</td>
+                        <td className="px-4 py-3">
+                          <input
+                            type="text"
+                            value={editForm.department}
+                            onChange={(e) => setEditForm((f) => ({ ...f, department: e.target.value }))}
+                            className="input-field text-sm py-1"
+                            placeholder="แผนก"
+                          />
+                        </td>
+                        <td className="px-4 py-3 text-slate-400">-</td>
+                        <td className="px-4 py-3 text-slate-500">{formatDateTime(u.created_at)}</td>
+                        <td className="px-4 py-3">
+                          <div className="flex gap-2">
+                            <button
+                              onClick={() => saveEdit(u.id)}
+                              className="text-xs font-medium text-blue-600 hover:underline"
+                            >
+                              บันทึก
+                            </button>
+                            <button
+                              onClick={() => setEditingId(null)}
+                              className="text-xs font-medium text-slate-500 hover:underline"
+                            >
+                              ยกเลิก
+                            </button>
+                          </div>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="px-4 py-3 font-medium text-slate-900 max-w-[220px] break-words">{u.full_name}</td>
+                        <td className="px-4 py-3 text-slate-600">{u.email}</td>
+                        <td className="px-4 py-3 text-slate-600 max-w-[160px] break-words">{u.department || "-"}</td>
+                        <td className="px-4 py-3">
+                          <select
+                            value={u.role}
+                            onChange={(e) => updateRole(u.id, e.target.value as UserRole)}
+                            className={`text-xs font-medium px-2 py-1 rounded-full border-0 cursor-pointer ${
+                              u.role === "accounting"
+                                ? "bg-purple-100 text-purple-800"
+                                : "bg-blue-100 text-blue-800"
+                            }`}
+                          >
+                            <option value="employee">พนักงาน</option>
+                            <option value="accounting">ฝ่ายบัญชี</option>
+                          </select>
+                        </td>
+                        <td className="px-4 py-3 text-slate-500">{formatDateTime(u.created_at)}</td>
+                        <td className="px-4 py-3">
+                          <button
+                            onClick={() => startEdit(u)}
+                            className="text-xs font-medium text-blue-600 hover:underline"
+                          >
+                            แก้ไข
+                          </button>
+                        </td>
+                      </>
+                    )}
                   </tr>
                 ))}
               </tbody>

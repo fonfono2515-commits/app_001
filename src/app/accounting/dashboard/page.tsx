@@ -176,10 +176,10 @@ export default async function AccountingDashboard() {
                             {emp.full_name?.[0]?.toUpperCase()}
                           </span>
                         </div>
-                        <div>
-                          <p className="font-medium text-slate-900">{emp.full_name}</p>
+                        <div className="max-w-[180px]">
+                          <p className="font-medium text-slate-900 break-words">{emp.full_name}</p>
                           {emp.department && (
-                            <p className="text-xs text-slate-400">{emp.department}</p>
+                            <p className="text-xs text-slate-400 break-words">{emp.department}</p>
                           )}
                         </div>
                       </div>

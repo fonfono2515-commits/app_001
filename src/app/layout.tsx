@@ -8,8 +8,12 @@ const sarabun = Sarabun({
 });
 
 export const metadata: Metadata = {
-  title: "ระบบสำรองจ่าย",
+  title: "สำรอง (TR&ODF)",
   description: "ระบบบันทึกการสำรองจ่ายของพนักงาน",
+  icons: {
+    icon: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export default function RootLayout({

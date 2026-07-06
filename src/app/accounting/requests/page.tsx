@@ -120,13 +120,16 @@ export default function AccountingRequestsPage() {
         cell.s = c === "C"
           ? { font: { bold: true, color: { rgb: empColor } }, ...(isTransferred ? { fill: purpleFill } : {}), border }
           : { ...(isTransferred ? { fill: purpleFill } : {}), border };
+        if (c === "F") cell.z = "#,##0.00";
       });
     });
 
     const summaryRow = oldestFirst.length + 3;
     cols.forEach((c) => {
       const cell = ws[`${c}${summaryRow}`];
-      if (cell) cell.s = { font: { bold: true }, border };
+      if (!cell) return;
+      cell.s = { font: { bold: true }, border };
+      if (c === "F") cell.z = "#,##0.00";
     });
 
     ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 20 }, { wch: 14 }];
