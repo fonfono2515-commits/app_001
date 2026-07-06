@@ -34,7 +34,7 @@ export default function AccountingRequestsPage() {
     const supabase = createClient();
     let query = supabase
       .from("expense_requests")
-      .select(`*, employee:profiles!employee_id(full_name, department), category:expense_categories(name, color), topic:expense_topics(name)`)
+      .select(`*, employee:profiles!employee_id(full_name, department), category:expense_categories(name, color), topic:expense_topics(name), transferrer:profiles!transferred_by(full_name)`)
       .order("created_at", { ascending: false });
 
     if (filters.status) query = query.eq("status", filters.status);
@@ -66,6 +66,32 @@ export default function AccountingRequestsPage() {
   }, []);
 
   const totalAmount = requests.reduce((s, r) => s + r.amount, 0);
+
+  function csvEscape(value: string) {
+    if (/[",\n]/.test(value)) return '"' + value.replace(/"/g, '""') + '"';
+    return value;
+  }
+
+  function exportToExcel() {
+    const header = ["วันที่", "ผู้โอน", "รายการ", "ประเภทค่าใช้จ่าย", "จำนวนเงินรวม"];
+    const rows = requests.map((r) => [
+      r.transferred_at ? formatDate(r.transferred_at) : formatDate(r.expense_date),
+      r.transferrer?.full_name || "",
+      r.title,
+      r.category?.name || "",
+      String(r.amount),
+    ]);
+    const csv = [header, ...rows]
+      .map((row) => row.map(csvEscape).join(","))
+      .join("\n");
+    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `รายงานสำรองจ่าย_${formatDate(new Date())}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <div className="space-y-6">
@@ -133,7 +159,19 @@ export default function AccountingRequestsPage() {
       {/* Summary */}
       <div className="flex items-center justify-between text-sm text-slate-600">
         <span>พบ {requests.length} รายการ</span>
-        <span className="font-semibold">รวม: {formatCurrency(totalAmount)}</span>
+        <div className="flex items-center gap-4">
+          <span className="font-semibold">รวม: {formatCurrency(totalAmount)}</span>
+          <button
+            onClick={exportToExcel}
+            disabled={requests.length === 0}
+            className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
+            </svg>
+            Export Excel
+          </button>
+        </div>
       </div>
 
       {/* Table */}

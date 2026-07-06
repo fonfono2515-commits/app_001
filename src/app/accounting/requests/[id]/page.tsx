@@ -4,7 +4,7 @@ import Link from "next/link";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { RequestActions } from "@/components/accounting/RequestActions";
-import type { ExpenseRequest, ExpenseCategory } from "@/types";
+import type { ExpenseRequest, ExpenseCategory, ExpenseTopic } from "@/types";
 
 export default async function AccountingRequestDetail({
   params,
@@ -13,13 +13,14 @@ export default async function AccountingRequestDetail({
 }) {
   const supabase = createClient();
 
-  const [{ data: req }, { data: categories }] = await Promise.all([
+  const [{ data: req }, { data: categories }, { data: topics }] = await Promise.all([
     supabase
       .from("expense_requests")
       .select(`*, employee:profiles!employee_id(full_name, department, email), topic:expense_topics(name), category:expense_categories(name, color), reviewer:profiles!reviewed_by(full_name), transferrer:profiles!transferred_by(full_name)`)
       .eq("id", params.id)
       .single(),
     supabase.from("expense_categories").select("*").order("name"),
+    supabase.from("expense_topics").select("*, category:expense_categories(*)").order("name"),
   ]);
 
   if (!req) notFound();
@@ -131,6 +132,7 @@ export default async function AccountingRequestDetail({
       <RequestActions
         request={request}
         categories={(categories as ExpenseCategory[]) || []}
+        topics={(topics as ExpenseTopic[]) || []}
       />
     </div>
   );

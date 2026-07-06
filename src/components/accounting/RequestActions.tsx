@@ -4,25 +4,58 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ImageUpload } from "@/components/ui/ImageUpload";
-import type { ExpenseRequest, ExpenseCategory, ExpenseStatus } from "@/types";
+import type { ExpenseRequest, ExpenseCategory, ExpenseTopic, ExpenseStatus } from "@/types";
 
 interface RequestActionsProps {
   request: ExpenseRequest;
   categories: ExpenseCategory[];
+  topics: ExpenseTopic[];
 }
 
-export function RequestActions({ request, categories }: RequestActionsProps) {
+function slipStoragePath(url: string): string | null {
+  const marker = "/object/public/expense-slips/";
+  const idx = url.indexOf(marker);
+  return idx === -1 ? null : url.slice(idx + marker.length);
+}
+
+export function RequestActions({ request, categories, topics }: RequestActionsProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [transferNote, setTransferNote] = useState("");
   const [transferSlip, setTransferSlip] = useState<File | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState(request.category_id || "");
   const [showTransferForm, setShowTransferForm] = useState(false);
-  const [showAddSlipForm, setShowAddSlipForm] = useState(false);
-  const [additionalSlips, setAdditionalSlips] = useState<File[]>([]);
   const [error, setError] = useState("");
 
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editTitle, setEditTitle] = useState(request.title);
+  const [editTopicId, setEditTopicId] = useState(request.topic_id || "");
+  const [editCategoryId, setEditCategoryId] = useState(request.category_id || "");
+  const [editAmount, setEditAmount] = useState(String(request.amount));
+  const [editDate, setEditDate] = useState(request.expense_date);
+  const [editNotes, setEditNotes] = useState(request.notes || "");
+  const [editSlipUrls, setEditSlipUrls] = useState<string[]>(request.slip_urls || []);
+  const [editNewFiles, setEditNewFiles] = useState<File[]>([]);
+
   if (["transferred", "rejected"].includes(request.status)) return null;
+
+  function openEditForm() {
+    setEditTitle(request.title);
+    setEditTopicId(request.topic_id || "");
+    setEditCategoryId(request.category_id || "");
+    setEditAmount(String(request.amount));
+    setEditDate(request.expense_date);
+    setEditNotes(request.notes || "");
+    setEditSlipUrls(request.slip_urls || []);
+    setEditNewFiles([]);
+    setError("");
+    setShowEditForm(true);
+  }
+
+  function handleEditTopicChange(topicId: string) {
+    setEditTopicId(topicId);
+    const topic = topics.find((t) => t.id === topicId);
+    if (topic?.category_id) setEditCategoryId(topic.category_id);
+  }
 
   async function updateStatus(status: ExpenseStatus) {
     setLoading(true);
@@ -30,16 +63,13 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
     const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
 
-    const updates: Record<string, unknown> = {
-      status,
-      reviewed_by: user?.id,
-      reviewed_at: new Date().toISOString(),
-    };
-    if (selectedCategory) updates.category_id = selectedCategory;
-
     const { error: err } = await supabase
       .from("expense_requests")
-      .update(updates)
+      .update({
+        status,
+        reviewed_by: user?.id,
+        reviewed_at: new Date().toISOString(),
+      })
       .eq("id", request.id);
 
     if (err) {
@@ -99,9 +129,13 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
     setLoading(false);
   }
 
-  async function handleAddSlips() {
-    if (additionalSlips.length === 0) {
-      setError("กรุณาเลือกรูปสลิปที่ต้องการแนบเพิ่ม");
+  function removeEditSlip(index: number) {
+    setEditSlipUrls((urls) => urls.filter((_, i) => i !== index));
+  }
+
+  async function handleSaveEdit() {
+    if (!editTitle.trim() || !editAmount || !editDate) {
+      setError("กรุณากรอกหัวข้อ จำนวนเงิน และวันที่ให้ครบถ้วน");
       return;
     }
     setLoading(true);
@@ -109,7 +143,7 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
     const supabase = createClient();
 
     const newUrls: string[] = [];
-    for (const file of additionalSlips) {
+    for (const file of editNewFiles) {
       const ext = file.name.split(".").pop();
       const fileName = `additional/${request.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
       const { error: uploadError } = await supabase.storage
@@ -128,9 +162,19 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
       newUrls.push(publicUrl);
     }
 
+    const finalSlipUrls = [...editSlipUrls, ...newUrls];
+
     const { error: err } = await supabase
       .from("expense_requests")
-      .update({ slip_urls: [...(request.slip_urls || []), ...newUrls] })
+      .update({
+        title: editTitle.trim(),
+        topic_id: editTopicId || null,
+        category_id: editCategoryId || null,
+        amount: parseFloat(editAmount),
+        expense_date: editDate,
+        notes: editNotes || null,
+        slip_urls: finalSlipUrls,
+      })
       .eq("id", request.id);
 
     if (err) {
@@ -138,8 +182,14 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
       setLoading(false);
       return;
     }
-    setAdditionalSlips([]);
-    setShowAddSlipForm(false);
+
+    const removedUrls = (request.slip_urls || []).filter((u) => !finalSlipUrls.includes(u));
+    const removedPaths = removedUrls.map(slipStoragePath).filter((p): p is string => !!p);
+    if (removedPaths.length > 0) {
+      await supabase.storage.from("expense-slips").remove(removedPaths);
+    }
+
+    setShowEditForm(false);
     router.refresh();
     setLoading(false);
   }
@@ -154,35 +204,18 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
         </div>
       )}
 
-      {/* Edit Category */}
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-1">
-          แก้ไขประเภทค่าใช้จ่าย
-        </label>
-        <select
-          value={selectedCategory}
-          onChange={(e) => setSelectedCategory(e.target.value)}
-          className="input-field"
-        >
-          <option value="">-- เลือกประเภท --</option>
-          {categories.map((c) => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
-      </div>
-
       {/* Status Actions */}
-      {!showTransferForm && !showAddSlipForm && (
+      {!showTransferForm && !showEditForm && (
         <div className="flex flex-wrap gap-3">
           <button
-            onClick={() => setShowAddSlipForm(true)}
+            onClick={openEditForm}
             disabled={loading}
             className="btn-secondary flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
             </svg>
-            แนบสลิปเพิ่มเติม
+            แก้ไขข้อมูล
           </button>
           {request.status === "pending" && (
             <button
@@ -236,30 +269,124 @@ export function RequestActions({ request, categories }: RequestActionsProps) {
         </div>
       )}
 
-      {/* Add Slip Form */}
-      {showAddSlipForm && (
+      {/* Edit Form */}
+      {showEditForm && (
         <div className="border border-blue-200 rounded-lg p-4 bg-blue-50 space-y-4">
-          <h4 className="font-medium text-blue-900">แนบสลิปเพิ่มเติมให้พนักงาน</h4>
+          <h4 className="font-medium text-blue-900">แก้ไขข้อมูลใบสำรองจ่าย</h4>
+
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-1">
-              สลิป / คำสั่งซื้อ / เอกสารอื่นๆ <span className="text-red-500">*</span>
+              หัวข้อ <span className="text-red-500">*</span>
             </label>
-            <ImageUpload onUpload={setAdditionalSlips} label="แนบรูปสลิปเพิ่มเติม" multiple />
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              className="input-field"
+            />
           </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">หัวข้อสำรองจ่าย</label>
+              <select
+                value={editTopicId}
+                onChange={(e) => handleEditTopicChange(e.target.value)}
+                className="input-field"
+              >
+                <option value="">-- เลือกหัวข้อ --</option>
+                {topics.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">ประเภทค่าใช้จ่าย</label>
+              <select
+                value={editCategoryId}
+                onChange={(e) => setEditCategoryId(e.target.value)}
+                className="input-field"
+              >
+                <option value="">-- เลือกประเภท --</option>
+                {categories.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                จำนวนเงิน (บาท) <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="number"
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+                className="input-field"
+                min="0"
+                step="0.01"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                วันที่ <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                className="input-field"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">หมายเหตุ</label>
+            <textarea
+              value={editNotes}
+              onChange={(e) => setEditNotes(e.target.value)}
+              className="input-field min-h-[80px] resize-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">สลิป / เอกสารที่แนบไว้</label>
+            {editSlipUrls.length > 0 && (
+              <div className="flex flex-wrap gap-2 mb-3">
+                {editSlipUrls.map((url, i) => (
+                  <div key={url} className="relative">
+                    <img src={url} alt={`slip ${i + 1}`} className="w-24 h-24 object-contain rounded-lg border border-slate-200 bg-white" />
+                    <button
+                      type="button"
+                      onClick={() => removeEditSlip(i)}
+                      className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs hover:bg-red-600"
+                      aria-label="ลบรูปนี้"
+                    >
+                      ×
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+            <ImageUpload onUpload={setEditNewFiles} label="แนบสลิป/เอกสารเพิ่มเติม" multiple />
+          </div>
+
           <div className="flex gap-3">
             <button
-              onClick={() => { setShowAddSlipForm(false); setAdditionalSlips([]); setError(""); }}
+              onClick={() => { setShowEditForm(false); setError(""); }}
               className="btn-secondary flex-1"
               disabled={loading}
             >
               ยกเลิก
             </button>
             <button
-              onClick={handleAddSlips}
+              onClick={handleSaveEdit}
               disabled={loading}
               className="btn-primary flex-1 disabled:opacity-50"
             >
-              {loading ? "กำลังบันทึก..." : "บันทึกสลิปเพิ่มเติม"}
+              {loading ? "กำลังบันทึก..." : "บันทึกข้อมูล"}
             </button>
           </div>
         </div>
