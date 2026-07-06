@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { formatDate, formatCurrency } from "@/lib/utils";
+import { formatDate, formatCurrency, formatMonthYear } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { ExpenseRequest, ExpenseCategory } from "@/types";
 
@@ -67,28 +67,46 @@ export default function AccountingRequestsPage() {
 
   const totalAmount = requests.reduce((s, r) => s + r.amount, 0);
 
-  function csvEscape(value: string) {
-    if (/[",\n]/.test(value)) return '"' + value.replace(/"/g, '""') + '"';
-    return value;
+  function escapeHtml(value: string) {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
   }
 
   function exportToExcel() {
-    const header = ["วันที่", "ผู้โอน", "รายการ", "ประเภทค่าใช้จ่าย", "จำนวนเงินรวม"];
-    const rows = requests.map((r) => [
-      r.transferred_at ? formatDate(r.transferred_at) : formatDate(r.expense_date),
-      r.transferrer?.full_name || "",
-      r.title,
-      r.category?.name || "",
-      String(r.amount),
-    ]);
-    const csv = [header, ...rows]
-      .map((row) => row.map(csvEscape).join(","))
-      .join("\n");
-    const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
+    const oldestFirst = [...requests].reverse();
+    const monthTitle = `สรุปข้อมูลสำรองจ่ายประจำเดือน ${formatMonthYear(new Date())}`;
+    const headerCells = ["ลำดับ", "วันที่", "พนักงาน", "รายการ", "ประเภทค่าใช้จ่าย", "จำนวนเงินรวม"];
+
+    const titleRow = `<tr><td colspan="6" style="font-weight:bold;font-size:14pt;">${escapeHtml(monthTitle)}</td></tr>`;
+    const headerRow = `<tr>${headerCells.map((h) => `<th style="background-color:#e2e8f0;font-weight:bold;">${escapeHtml(h)}</th>`).join("")}</tr>`;
+
+    const dataRows = oldestFirst
+      .map((r, i) => {
+        const bg = r.status === "transferred" ? ' style="background-color:#fecaca;"' : "";
+        const date = r.transferred_at ? formatDate(r.transferred_at) : formatDate(r.expense_date);
+        return `<tr${bg}>
+          <td>${i + 1}</td>
+          <td>${escapeHtml(date)}</td>
+          <td>${escapeHtml(r.employee?.full_name || "")}</td>
+          <td>${escapeHtml(r.title)}</td>
+          <td>${escapeHtml(r.category?.name || "")}</td>
+          <td style="text-align:right;">${r.amount}</td>
+        </tr>`;
+      })
+      .join("");
+
+    const summaryRow = `<tr><td colspan="4"></td><td style="font-weight:bold;">รวมทั้งสิ้น</td><td style="font-weight:bold;text-align:right;">${totalAmount}</td></tr>`;
+
+    const html = `<html><head><meta charset="utf-8"></head><body><table border="1">${titleRow}${headerRow}${dataRows}${summaryRow}</table></body></html>`;
+
+    const blob = new Blob([html], { type: "application/vnd.ms-excel;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `รายงานสำรองจ่าย_${formatDate(new Date())}.csv`;
+    a.download = `รายงานสำรองจ่าย_${formatDate(new Date())}.xls`;
     a.click();
     URL.revokeObjectURL(url);
   }
