@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import * as XLSX from "xlsx-js-style";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import { formatDate, formatCurrency, formatMonthYear } from "@/lib/utils";
+import { formatDate, formatCurrency, formatMonthYear, STATUS_LABELS } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { ExpenseRequest, ExpenseCategory } from "@/types";
 
@@ -77,8 +77,26 @@ export default function AccountingRequestsPage() {
 
   const totalAmount = requests.reduce((s, r) => s + r.amount, 0);
 
-  function exportToExcel() {
-    const oldestFirst = [...requests].reverse();
+  async function exportToExcel() {
+    const supabase = createClient();
+    let query = supabase
+      .from("expense_requests")
+      .select(`*, employee:profiles!employee_id(full_name, department), category:expense_categories(name, color), topic:expense_topics(name), transferrer:profiles!transferred_by(full_name)`)
+      .order("created_at", { ascending: false });
+
+    if (filters.category_id) query = query.eq("category_id", filters.category_id);
+    if (filters.date_from) query = query.gte("expense_date", filters.date_from);
+    if (filters.date_to) query = query.lte("expense_date", filters.date_to);
+    if (filters.search) {
+      query = query.or(
+        `title.ilike.%${filters.search}%,employee.full_name.ilike.%${filters.search}%`
+      );
+    }
+
+    const { data } = await query;
+    const allRequests = (data as ExpenseRequest[]) || [];
+    const oldestFirst = [...allRequests].reverse();
+    const grandTotal = allRequests.reduce((s, r) => s + r.amount, 0);
     const monthTitle = `สรุปข้อมูลสำรองจ่ายประจำเดือน ${formatMonthYear(new Date())}`;
 
     const employeePalette = [
@@ -93,13 +111,13 @@ export default function AccountingRequestsPage() {
 
     const wb = XLSX.utils.book_new();
     const wsData: (string | number)[][] = [
-      [monthTitle, "", "", "", "", "", ""],
-      ["ลำดับ", "วันที่", "วันที่โอน", "พนักงาน", "รายการ", "ประเภทค่าใช้จ่าย", "จำนวนเงินรวม"],
+      [monthTitle, "", "", "", "", "", "", ""],
+      ["ลำดับ", "วันที่", "วันที่โอน", "พนักงาน", "รายการ", "ประเภทค่าใช้จ่าย", "สถานะ", "จำนวนเงินรวม"],
       ...oldestFirst.map((r, i) => {
         const transferDate = r.transferred_at ? formatDate(r.transferred_at) : "-";
-        return [i + 1, formatDate(r.expense_date), transferDate, r.employee?.full_name || "", r.title, r.category?.name || "", r.amount];
+        return [i + 1, formatDate(r.expense_date), transferDate, r.employee?.full_name || "", r.title, r.category?.name || "", STATUS_LABELS[r.status] || r.status, r.amount];
       }),
-      ["", "", "", "", "", "รวมทั้งสิ้น", totalAmount],
+      ["", "", "", "", "", "", "รวมทั้งสิ้น", grandTotal],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -107,7 +125,7 @@ export default function AccountingRequestsPage() {
     const redFill = { patternType: "solid", fgColor: { rgb: "FEF2F2" } };
     const headerFill = { patternType: "solid", fgColor: { rgb: "E2E8F0" } };
     const border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
-    const cols = ["A", "B", "C", "D", "E", "F", "G"];
+    const cols = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
     const titleCell = ws["A1"];
     if (titleCell) titleCell.s = { font: { bold: true, sz: 14, color: { rgb: "1D4ED8" } } };
@@ -129,7 +147,7 @@ export default function AccountingRequestsPage() {
         cell.s = c === "D"
           ? { font: { bold: true, color: { rgb: empColor } }, ...(isTransferred ? { fill: redFill } : {}), border }
           : { ...(isTransferred ? { fill: redFill } : {}), border };
-        if (c === "G") cell.z = "#,##0.00";
+        if (c === "H") cell.z = "#,##0.00";
       });
     });
 
@@ -138,11 +156,11 @@ export default function AccountingRequestsPage() {
       const cell = ws[`${c}${summaryRow}`];
       if (!cell) return;
       cell.s = { font: { bold: true }, border };
-      if (c === "G") cell.z = "#,##0.00";
+      if (c === "H") cell.z = "#,##0.00";
     });
 
-    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 20 }, { wch: 14 }];
-    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
+    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 20 }, { wch: 14 }, { wch: 14 }];
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 7 } }];
 
     XLSX.utils.book_append_sheet(wb, ws, "รายงาน");
     XLSX.writeFile(wb, `รายงานสำรองจ่าย_${formatDate(new Date())}.xlsx`);
@@ -269,13 +287,12 @@ export default function AccountingRequestsPage() {
           <span className="font-semibold">รวม: {formatCurrency(totalAmount)}</span>
           <button
             onClick={exportToExcel}
-            disabled={requests.length === 0}
-            className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+            className="btn-secondary flex items-center gap-2"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
             </svg>
-            Export Excel
+            Export Excel (ทั้งหมด)
           </button>
         </div>
       </div>
