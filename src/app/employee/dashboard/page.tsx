@@ -2,7 +2,40 @@ import { createClient } from "@/lib/supabase/server";
 import Link from "next/link";
 import { formatDate, formatCurrency } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
-import type { ExpenseRequest } from "@/types";
+import type { ExpenseRequest, ExpenseStatus } from "@/types";
+
+const STATUS_GROUPS: { statuses: ExpenseStatus[]; label: string }[] = [
+  { statuses: ["pending", "reviewing"], label: "รอตรวจสอบ" },
+  { statuses: ["approved"], label: "อนุมัติแล้ว" },
+  { statuses: ["transferred"], label: "โอนแล้ว" },
+  { statuses: ["rejected"], label: "ปฏิเสธ" },
+];
+
+function RequestRow({ req }: { req: ExpenseRequest }) {
+  return (
+    <Link
+      href={`/employee/requests/${req.id}`}
+      className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors"
+    >
+      <div className="flex items-start gap-4">
+        <div
+          className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
+          style={{ backgroundColor: req.category?.color || "#94a3b8" }}
+        />
+        <div>
+          <p className="font-medium text-slate-900">{req.title}</p>
+          <p className="text-sm text-slate-500 mt-0.5">
+            {req.category?.name} • {req.topic?.name} • {formatDate(req.expense_date)}
+          </p>
+        </div>
+      </div>
+      <div className="flex items-center gap-4">
+        <p className="font-semibold text-slate-900">{formatCurrency(req.amount)}</p>
+        <StatusBadge status={req.status} />
+      </div>
+    </Link>
+  );
+}
 
 export default async function EmployeeDashboard() {
   const supabase = createClient();
@@ -59,11 +92,8 @@ export default async function EmployeeDashboard() {
       </div>
 
       {/* List */}
-      <div className="card overflow-hidden">
-        <div className="px-6 py-4 border-b border-slate-100">
-          <h2 className="font-semibold text-slate-900">รายการล่าสุด</h2>
-        </div>
-        {!requests || requests.length === 0 ? (
+      {!requests || requests.length === 0 ? (
+        <div className="card overflow-hidden">
           <div className="text-center py-12">
             <svg className="mx-auto h-12 w-12 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -73,35 +103,28 @@ export default async function EmployeeDashboard() {
               สร้างรายการแรก
             </Link>
           </div>
-        ) : (
-          <div className="divide-y divide-slate-100">
-            {(requests as ExpenseRequest[]).map((req) => (
-              <Link
-                key={req.id}
-                href={`/employee/requests/${req.id}`}
-                className="flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition-colors"
-              >
-                <div className="flex items-start gap-4">
-                  <div
-                    className="w-2 h-2 rounded-full mt-2 flex-shrink-0"
-                    style={{ backgroundColor: req.category?.color || "#94a3b8" }}
-                  />
-                  <div>
-                    <p className="font-medium text-slate-900">{req.title}</p>
-                    <p className="text-sm text-slate-500 mt-0.5">
-                      {req.category?.name} • {req.topic?.name} • {formatDate(req.expense_date)}
-                    </p>
-                  </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          {STATUS_GROUPS.map((group) => {
+            const items = (requests as ExpenseRequest[]).filter((r) => group.statuses.includes(r.status));
+            if (items.length === 0) return null;
+            return (
+              <div key={group.label} className="card overflow-hidden">
+                <div className="px-6 py-4 border-b border-slate-100 flex items-center gap-2">
+                  <h2 className="font-semibold text-slate-900">{group.label}</h2>
+                  <span className="text-sm text-slate-400">({items.length})</span>
                 </div>
-                <div className="flex items-center gap-4">
-                  <p className="font-semibold text-slate-900">{formatCurrency(req.amount)}</p>
-                  <StatusBadge status={req.status} />
+                <div className="divide-y divide-slate-100">
+                  {items.map((req) => (
+                    <RequestRow key={req.id} req={req} />
+                  ))}
                 </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }
