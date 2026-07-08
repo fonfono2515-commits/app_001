@@ -36,7 +36,10 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
   const [editSlipUrls, setEditSlipUrls] = useState<string[]>(request.slip_urls || []);
   const [editNewFiles, setEditNewFiles] = useState<File[]>([]);
 
-  if (["transferred", "rejected"].includes(request.status)) return null;
+  if (request.status === "rejected") return null;
+  if (request.status === "transferred" && request.archived_at) return null;
+
+  const isTransferred = request.status === "transferred";
 
   function openEditForm() {
     setEditTitle(request.title);
@@ -69,6 +72,29 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
         status,
         reviewed_by: user?.id,
         reviewed_at: new Date().toISOString(),
+      })
+      .eq("id", request.id);
+
+    if (err) {
+      setError(err.message);
+      setLoading(false);
+      return;
+    }
+    router.refresh();
+    setLoading(false);
+  }
+
+  async function handleArchive() {
+    setLoading(true);
+    setError("");
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    const { error: err } = await supabase
+      .from("expense_requests")
+      .update({
+        archived_at: new Date().toISOString(),
+        archived_by: user?.id,
       })
       .eq("id", request.id);
 
@@ -208,8 +234,24 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
         </div>
       )}
 
+      {/* Archive Action */}
+      {isTransferred && !showTransferForm && !showEditForm && (
+        <div className="flex flex-wrap gap-3">
+          <button
+            onClick={handleArchive}
+            disabled={loading}
+            className="bg-violet-600 text-white px-4 py-2 rounded-lg hover:bg-violet-700 transition-colors font-medium flex items-center gap-2 disabled:opacity-50"
+          >
+            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            {loading ? "กำลังบันทึก..." : "ยืนยัน"}
+          </button>
+        </div>
+      )}
+
       {/* Status Actions */}
-      {!showTransferForm && !showEditForm && (
+      {!isTransferred && !showTransferForm && !showEditForm && (
         <div className="flex flex-wrap gap-3">
           <button
             onClick={openEditForm}

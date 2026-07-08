@@ -8,12 +8,11 @@ import { formatDate, formatCurrency, formatMonthYear } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import type { ExpenseRequest, ExpenseCategory } from "@/types";
 
-const STATUS_OPTIONS = [
+const ACTIVE_STATUS_OPTIONS = [
   { value: "", label: "ทุกสถานะ" },
   { value: "pending", label: "รอตรวจสอบ" },
   { value: "reviewing", label: "กำลังตรวจสอบ" },
   { value: "approved", label: "อนุมัติแล้ว" },
-  { value: "transferred", label: "โอนแล้ว" },
   { value: "rejected", label: "ปฏิเสธ" },
 ];
 
@@ -21,6 +20,8 @@ export default function AccountingRequestsPage() {
   const [requests, setRequests] = useState<ExpenseRequest[]>([]);
   const [categories, setCategories] = useState<ExpenseCategory[]>([]);
   const [loading, setLoading] = useState(true);
+  const [mainTab, setMainTab] = useState<"active" | "transferred">("active");
+  const [transferredView, setTransferredView] = useState<"recent" | "archived">("recent");
 
   const [filters, setFilters] = useState({
     search: "",
@@ -38,7 +39,15 @@ export default function AccountingRequestsPage() {
       .select(`*, employee:profiles!employee_id(full_name, department), category:expense_categories(name, color), topic:expense_topics(name), transferrer:profiles!transferred_by(full_name)`)
       .order("created_at", { ascending: false });
 
-    if (filters.status) query = query.eq("status", filters.status);
+    if (mainTab === "transferred") {
+      query = query.eq("status", "transferred");
+      query = transferredView === "archived"
+        ? query.not("archived_at", "is", null)
+        : query.is("archived_at", null);
+    } else {
+      query = query.neq("status", "transferred");
+      if (filters.status) query = query.eq("status", filters.status);
+    }
     if (filters.category_id) query = query.eq("category_id", filters.category_id);
     if (filters.date_from) query = query.gte("expense_date", filters.date_from);
     if (filters.date_to) query = query.lte("expense_date", filters.date_to);
@@ -51,7 +60,7 @@ export default function AccountingRequestsPage() {
     const { data } = await query;
     setRequests((data as ExpenseRequest[]) || []);
     setLoading(false);
-  }, [filters]);
+  }, [filters, mainTab, transferredView]);
 
   useEffect(() => {
     fetchRequests();
@@ -84,21 +93,21 @@ export default function AccountingRequestsPage() {
 
     const wb = XLSX.utils.book_new();
     const wsData: (string | number)[][] = [
-      [monthTitle, "", "", "", "", ""],
-      ["ลำดับ", "วันที่", "พนักงาน", "รายการ", "ประเภทค่าใช้จ่าย", "จำนวนเงินรวม"],
+      [monthTitle, "", "", "", "", "", ""],
+      ["ลำดับ", "วันที่", "วันที่โอน", "พนักงาน", "รายการ", "ประเภทค่าใช้จ่าย", "จำนวนเงินรวม"],
       ...oldestFirst.map((r, i) => {
-        const date = r.transferred_at ? formatDate(r.transferred_at) : formatDate(r.expense_date);
-        return [i + 1, date, r.employee?.full_name || "", r.title, r.category?.name || "", r.amount];
+        const transferDate = r.transferred_at ? formatDate(r.transferred_at) : "-";
+        return [i + 1, formatDate(r.expense_date), transferDate, r.employee?.full_name || "", r.title, r.category?.name || "", r.amount];
       }),
-      ["", "", "", "", "รวมทั้งสิ้น", totalAmount],
+      ["", "", "", "", "", "รวมทั้งสิ้น", totalAmount],
     ];
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    const purpleFill = { patternType: "solid", fgColor: { rgb: "EDE9FE" } };
+    const redFill = { patternType: "solid", fgColor: { rgb: "FEF2F2" } };
     const headerFill = { patternType: "solid", fgColor: { rgb: "E2E8F0" } };
     const border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
-    const cols = ["A", "B", "C", "D", "E", "F"];
+    const cols = ["A", "B", "C", "D", "E", "F", "G"];
 
     const titleCell = ws["A1"];
     if (titleCell) titleCell.s = { font: { bold: true, sz: 14, color: { rgb: "1D4ED8" } } };
@@ -117,10 +126,10 @@ export default function AccountingRequestsPage() {
       cols.forEach((c) => {
         const cell = ws[`${c}${row}`];
         if (!cell) return;
-        cell.s = c === "C"
-          ? { font: { bold: true, color: { rgb: empColor } }, ...(isTransferred ? { fill: purpleFill } : {}), border }
-          : { ...(isTransferred ? { fill: purpleFill } : {}), border };
-        if (c === "F") cell.z = "#,##0.00";
+        cell.s = c === "D"
+          ? { font: { bold: true, color: { rgb: empColor } }, ...(isTransferred ? { fill: redFill } : {}), border }
+          : { ...(isTransferred ? { fill: redFill } : {}), border };
+        if (c === "G") cell.z = "#,##0.00";
       });
     });
 
@@ -129,11 +138,11 @@ export default function AccountingRequestsPage() {
       const cell = ws[`${c}${summaryRow}`];
       if (!cell) return;
       cell.s = { font: { bold: true }, border };
-      if (c === "F") cell.z = "#,##0.00";
+      if (c === "G") cell.z = "#,##0.00";
     });
 
-    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 20 }, { wch: 14 }];
-    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 5 } }];
+    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 20 }, { wch: 14 }];
+    ws["!merges"] = [{ s: { r: 0, c: 0 }, e: { r: 0, c: 6 } }];
 
     XLSX.utils.book_append_sheet(wb, ws, "รายงาน");
     XLSX.writeFile(wb, `รายงานสำรองจ่าย_${formatDate(new Date())}.xlsx`);
@@ -146,6 +155,55 @@ export default function AccountingRequestsPage() {
         <p className="text-slate-500 text-sm mt-1">จัดการและตรวจสอบรายการสำรองจ่ายของพนักงาน</p>
       </div>
 
+      {/* Main Tabs */}
+      <div className="flex gap-2 border-b border-slate-200">
+        <button
+          onClick={() => setMainTab("active")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            mainTab === "active"
+              ? "border-blue-600 text-blue-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          ยังไม่โอน
+        </button>
+        <button
+          onClick={() => setMainTab("transferred")}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            mainTab === "transferred"
+              ? "border-emerald-600 text-emerald-600"
+              : "border-transparent text-slate-500 hover:text-slate-700"
+          }`}
+        >
+          โอนแล้ว
+        </button>
+      </div>
+
+      {mainTab === "transferred" && (
+        <div className="flex gap-2">
+          <button
+            onClick={() => setTransferredView("recent")}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              transferredView === "recent"
+                ? "bg-emerald-600 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            รายการล่าสุด
+          </button>
+          <button
+            onClick={() => setTransferredView("archived")}
+            className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
+              transferredView === "archived"
+                ? "bg-violet-600 text-white"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            จัดเก็บ
+          </button>
+        </div>
+      )}
+
       {/* Filters */}
       <div className="card p-4 space-y-3">
         <div className="flex flex-wrap gap-3">
@@ -156,15 +214,17 @@ export default function AccountingRequestsPage() {
             onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
             className="input-field flex-1 min-w-[200px]"
           />
-          <select
-            value={filters.status}
-            onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-            className="input-field w-40"
-          >
-            {STATUS_OPTIONS.map((o) => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
+          {mainTab === "active" && (
+            <select
+              value={filters.status}
+              onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
+              className="input-field w-40"
+            >
+              {ACTIVE_STATUS_OPTIONS.map((o) => (
+                <option key={o.value} value={o.value}>{o.label}</option>
+              ))}
+            </select>
+          )}
           <select
             value={filters.category_id}
             onChange={(e) => setFilters((f) => ({ ...f, category_id: e.target.value }))}

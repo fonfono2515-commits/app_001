@@ -16,7 +16,7 @@ export default async function AccountingRequestDetail({
   const [{ data: req }, { data: categories }, { data: topics }] = await Promise.all([
     supabase
       .from("expense_requests")
-      .select(`*, employee:profiles!employee_id(full_name, department, email), topic:expense_topics(name), category:expense_categories(name, color), reviewer:profiles!reviewed_by(full_name), transferrer:profiles!transferred_by(full_name)`)
+      .select(`*, employee:profiles!employee_id(full_name, department, email), topic:expense_topics(name), category:expense_categories(name, color), reviewer:profiles!reviewed_by(full_name), transferrer:profiles!transferred_by(full_name), archiver:profiles!archived_by(full_name)`)
       .eq("id", params.id)
       .single(),
     supabase.from("expense_categories").select("*").order("name"),
@@ -131,6 +131,21 @@ export default async function AccountingRequestDetail({
             ))}
           </div>
           <p className="text-xs text-slate-400 mt-2 text-center">คลิกที่รูปเพื่อดูขนาดเต็ม</p>
+        </div>
+      )}
+
+      {request.archived_at && (
+        <div className="card p-5 border-violet-200 bg-violet-50">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <h3 className="font-semibold text-violet-900">ยืนยันจัดเก็บแล้ว</h3>
+          </div>
+          <div className="text-sm text-violet-800 mt-2 space-y-1">
+            <p>ยืนยันโดย: {request.archiver?.full_name}</p>
+            <p>วันที่ยืนยัน: {formatDateTime(request.archived_at)}</p>
+          </div>
         </div>
       )}
 

@@ -54,6 +54,9 @@ export interface ExpenseRequest {
   transferred_by?: string;
   transferrer?: Profile;
   transfer_note?: string;
+  archived_at?: string;
+  archived_by?: string;
+  archiver?: Profile;
   created_at: string;
   updated_at: string;
 }

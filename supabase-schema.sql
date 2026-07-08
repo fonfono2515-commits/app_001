@@ -71,6 +71,8 @@ CREATE TABLE IF NOT EXISTS public.expense_requests (
   transferred_at TIMESTAMPTZ,
   transferred_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   transfer_note TEXT,
+  archived_at TIMESTAMPTZ,
+  archived_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
