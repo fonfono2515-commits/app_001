@@ -16,11 +16,11 @@ const ACTIVE_STATUS_OPTIONS = [
   { value: "rejected", label: "ปฏิเสธ" },
 ];
 
-const EXPORT_STATUS_GROUPS: { statuses: ExpenseStatus[]; label: string }[] = [
-  { statuses: ["transferred"], label: "โอนแล้ว" },
-  { statuses: ["approved"], label: "อนุมัติแล้ว" },
-  { statuses: ["pending", "reviewing"], label: "รอตรวจสอบ" },
-  { statuses: ["rejected"], label: "ปฏิเสธ" },
+const EXPORT_STATUS_GROUPS: { statuses: ExpenseStatus[]; label: string; color: string }[] = [
+  { statuses: ["transferred"], label: "โอนแล้ว", color: "1D4ED8" },
+  { statuses: ["approved"], label: "อนุมัติแล้ว", color: "15803D" },
+  { statuses: ["pending", "reviewing"], label: "รอตรวจสอบ", color: "B45309" },
+  { statuses: ["rejected"], label: "ปฏิเสธ", color: "B91C1C" },
 ];
 
 export default function AccountingRequestsPage() {
@@ -119,7 +119,7 @@ export default function AccountingRequestsPage() {
     const cols = ["A", "B", "C", "D", "E", "F", "G"];
 
     const wsData: (string | number)[][] = [];
-    const titleRows: number[] = [];
+    const titleRows: { row: number; color: string }[] = [];
     const headerRows: number[] = [];
     const dataRows: { row: number; empName: string }[] = [];
     const summaryRows: number[] = [];
@@ -130,7 +130,7 @@ export default function AccountingRequestsPage() {
       const oldestFirst = [...items].reverse();
       const groupTotal = items.reduce((s, r) => s + r.amount, 0);
 
-      titleRows.push(wsData.length);
+      titleRows.push({ row: wsData.length, color: group.color });
       wsData.push([`สรุปข้อมูลสำรองจ่ายประจำเดือน ${monthLabel} (${group.label})`, "", "", "", "", "", ""]);
 
       headerRows.push(wsData.length);
@@ -150,10 +150,10 @@ export default function AccountingRequestsPage() {
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    titleRows.forEach((r) => {
+    titleRows.forEach(({ row: r, color }) => {
       const row = r + 1;
       const cell = ws[`A${row}`];
-      if (cell) cell.s = { font: { bold: true, sz: 13, color: { rgb: "1D4ED8" } } };
+      if (cell) cell.s = { font: { bold: true, sz: 13, color: { rgb: color } } };
     });
 
     headerRows.forEach((r) => {
@@ -188,7 +188,7 @@ export default function AccountingRequestsPage() {
     });
 
     ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 20 }, { wch: 14 }];
-    ws["!merges"] = titleRows.map((r) => ({ s: { r, c: 0 }, e: { r, c: 6 } }));
+    ws["!merges"] = titleRows.map(({ row: r }) => ({ s: { r, c: 0 }, e: { r, c: 6 } }));
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "รายงาน");

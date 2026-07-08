@@ -4,11 +4,11 @@ import * as XLSX from "xlsx-js-style";
 import { formatDate, formatMonthYear } from "@/lib/utils";
 import type { ExpenseRequest, ExpenseStatus } from "@/types";
 
-const STATUS_GROUPS: { statuses: ExpenseStatus[]; label: string }[] = [
-  { statuses: ["transferred"], label: "โอนแล้ว" },
-  { statuses: ["approved"], label: "อนุมัติแล้ว" },
-  { statuses: ["pending", "reviewing"], label: "รอตรวจสอบ" },
-  { statuses: ["rejected"], label: "ปฏิเสธ" },
+const STATUS_GROUPS: { statuses: ExpenseStatus[]; label: string; color: string }[] = [
+  { statuses: ["transferred"], label: "โอนแล้ว", color: "1D4ED8" },
+  { statuses: ["approved"], label: "อนุมัติแล้ว", color: "15803D" },
+  { statuses: ["pending", "reviewing"], label: "รอตรวจสอบ", color: "B45309" },
+  { statuses: ["rejected"], label: "ปฏิเสธ", color: "B91C1C" },
 ];
 
 export function ExportExcelButton({ requests }: { requests: ExpenseRequest[] }) {
@@ -19,7 +19,7 @@ export function ExportExcelButton({ requests }: { requests: ExpenseRequest[] }) 
     const cols = ["A", "B", "C", "D", "E", "F"];
 
     const wsData: (string | number)[][] = [];
-    const titleRows: number[] = [];
+    const titleRows: { row: number; color: string }[] = [];
     const headerRows: number[] = [];
     const dataRows: number[] = [];
     const summaryRows: number[] = [];
@@ -30,7 +30,7 @@ export function ExportExcelButton({ requests }: { requests: ExpenseRequest[] }) 
       const oldestFirst = [...items].reverse();
       const groupTotal = items.reduce((s, r) => s + r.amount, 0);
 
-      titleRows.push(wsData.length);
+      titleRows.push({ row: wsData.length, color: group.color });
       wsData.push([`รายการสำรองจ่ายของฉัน ${monthLabel} (${group.label})`, "", "", "", "", ""]);
 
       headerRows.push(wsData.length);
@@ -50,10 +50,10 @@ export function ExportExcelButton({ requests }: { requests: ExpenseRequest[] }) 
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
 
-    titleRows.forEach((r) => {
+    titleRows.forEach(({ row: r, color }) => {
       const row = r + 1;
       const cell = ws[`A${row}`];
-      if (cell) cell.s = { font: { bold: true, sz: 13, color: { rgb: "1D4ED8" } } };
+      if (cell) cell.s = { font: { bold: true, sz: 13, color: { rgb: color } } };
     });
 
     headerRows.forEach((r) => {
@@ -85,7 +85,7 @@ export function ExportExcelButton({ requests }: { requests: ExpenseRequest[] }) 
     });
 
     ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 40 }, { wch: 20 }, { wch: 14 }, { wch: 12 }];
-    ws["!merges"] = titleRows.map((r) => ({ s: { r, c: 0 }, e: { r, c: 5 } }));
+    ws["!merges"] = titleRows.map(({ row: r }) => ({ s: { r, c: 0 }, e: { r, c: 5 } }));
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "รายงาน");
