@@ -9,9 +9,12 @@ interface EmployeeStat {
   full_name: string;
   department?: string;
   total: number;
-  pending: number;
-  transferred: number;
-  rejected: number;
+  pendingCount: number;
+  transferredCount: number;
+  rejectedCount: number;
+  pendingReviewAmount: number;
+  transferredAmount: number;
+  rejectedAmount: number;
   totalAmount: number;
   pendingAmount: number;
 }
@@ -50,9 +53,12 @@ export default async function AccountingDashboard() {
         full_name: emp.full_name,
         department: emp.department,
         total: 0,
-        pending: 0,
-        transferred: 0,
-        rejected: 0,
+        pendingCount: 0,
+        transferredCount: 0,
+        rejectedCount: 0,
+        pendingReviewAmount: 0,
+        transferredAmount: 0,
+        rejectedAmount: 0,
         totalAmount: 0,
         pendingAmount: 0,
       });
@@ -60,9 +66,18 @@ export default async function AccountingDashboard() {
     const s = employeeMap.get(emp.id)!;
     s.total += 1;
     s.totalAmount += req.amount;
-    if (req.status === "pending" || req.status === "reviewing") s.pending += 1;
-    if (req.status === "transferred") s.transferred += 1;
-    if (req.status === "rejected") s.rejected += 1;
+    if (req.status === "pending" || req.status === "reviewing") {
+      s.pendingCount += 1;
+      s.pendingReviewAmount += req.amount;
+    }
+    if (req.status === "transferred") {
+      s.transferredCount += 1;
+      s.transferredAmount += req.amount;
+    }
+    if (req.status === "rejected") {
+      s.rejectedCount += 1;
+      s.rejectedAmount += req.amount;
+    }
     if (!["transferred", "rejected"].includes(req.status)) s.pendingAmount += req.amount;
   }
   const employeeStats = Array.from(employeeMap.values()).sort((a, b) => b.totalAmount - a.totalAmount);
@@ -192,32 +207,14 @@ export default async function AccountingDashboard() {
                         {emp.total}
                       </Link>
                     </td>
-                    <td className="px-4 py-4 text-center">
-                      {emp.pending > 0 ? (
-                        <span className="inline-flex items-center justify-center w-6 h-6 bg-yellow-100 text-yellow-700 rounded-full text-xs font-bold">
-                          {emp.pending}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
+                    <td className="px-4 py-4 text-center font-medium text-yellow-700">
+                      {emp.pendingCount > 0 ? formatCurrency(emp.pendingReviewAmount) : <span className="text-slate-300">—</span>}
                     </td>
-                    <td className="px-4 py-4 text-center">
-                      {emp.transferred > 0 ? (
-                        <span className="inline-flex items-center justify-center w-6 h-6 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold">
-                          {emp.transferred}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
+                    <td className="px-4 py-4 text-center font-medium text-emerald-700">
+                      {emp.transferredCount > 0 ? formatCurrency(emp.transferredAmount) : <span className="text-slate-300">—</span>}
                     </td>
-                    <td className="px-4 py-4 text-center">
-                      {emp.rejected > 0 ? (
-                        <span className="inline-flex items-center justify-center w-6 h-6 bg-red-100 text-red-600 rounded-full text-xs font-bold">
-                          {emp.rejected}
-                        </span>
-                      ) : (
-                        <span className="text-slate-300">—</span>
-                      )}
+                    <td className="px-4 py-4 text-center font-medium text-red-600">
+                      {emp.rejectedCount > 0 ? formatCurrency(emp.rejectedAmount) : <span className="text-slate-300">—</span>}
                     </td>
                     <td className="px-4 py-4 text-right font-medium text-orange-600">
                       {emp.pendingAmount > 0 ? formatCurrency(emp.pendingAmount) : <span className="text-slate-300">—</span>}
