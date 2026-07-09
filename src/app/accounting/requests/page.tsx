@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import * as XLSX from "xlsx-js-style";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { formatDate, formatCurrency, formatMonthYear } from "@/lib/utils";
@@ -85,6 +84,7 @@ export default function AccountingRequestsPage() {
   const totalAmount = requests.reduce((s, r) => s + r.amount, 0);
 
   async function exportToExcel() {
+    const XLSX = await import("xlsx-js-style");
     const supabase = createClient();
     let query = supabase
       .from("expense_requests")

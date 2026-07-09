@@ -1,6 +1,5 @@
 "use client";
 
-import * as XLSX from "xlsx-js-style";
 import { formatDate, formatMonthYear } from "@/lib/utils";
 import type { ExpenseRequest, ExpenseStatus } from "@/types";
 
@@ -12,7 +11,8 @@ const STATUS_GROUPS: { statuses: ExpenseStatus[]; label: string; color: string }
 ];
 
 export function ExportExcelButton({ requests }: { requests: ExpenseRequest[] }) {
-  function exportToExcel() {
+  async function exportToExcel() {
+    const XLSX = await import("xlsx-js-style");
     const monthLabel = formatMonthYear(new Date());
     const headerFill = { patternType: "solid", fgColor: { rgb: "E2E8F0" } };
     const border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
