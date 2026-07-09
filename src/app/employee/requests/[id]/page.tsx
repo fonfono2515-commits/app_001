@@ -1,9 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import Image from "next/image";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import type { ExpenseRequest } from "@/types";
 
 export default async function EmployeeRequestDetail({
@@ -81,12 +81,10 @@ export default async function EmployeeRequestDetail({
           <h3 className="font-semibold text-slate-900 mb-3">สลิปที่แนบ</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {request.slip_urls.map((url, i) => (
-              <Image
+              <ZoomableImage
                 key={i}
                 src={url}
                 alt={`expense slip ${i + 1}`}
-                width={300}
-                height={200}
                 className="rounded-lg w-full object-contain max-h-40"
               />
             ))}
@@ -112,12 +110,10 @@ export default async function EmployeeRequestDetail({
               <p className="text-sm font-medium text-emerald-900 mb-2">สลิปการโอนคืน</p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 {request.transfer_slip_urls.map((url, i) => (
-                  <Image
+                  <ZoomableImage
                     key={i}
                     src={url}
                     alt={`transfer slip ${i + 1}`}
-                    width={300}
-                    height={200}
                     className="rounded-lg w-full object-contain max-h-40"
                   />
                 ))}

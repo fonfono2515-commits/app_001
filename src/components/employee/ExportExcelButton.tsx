@@ -96,9 +96,9 @@ export function ExportExcelButton({ requests }: { requests: ExpenseRequest[] }) 
     <button
       onClick={exportToExcel}
       disabled={requests.length === 0}
-      className="btn-secondary flex items-center gap-2 disabled:opacity-50"
+      className="btn-secondary flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm px-3 py-1.5 sm:px-4 sm:py-2 disabled:opacity-50"
     >
-      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5 5-5M12 15V3" />
       </svg>
       Export Excel

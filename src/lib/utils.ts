@@ -12,7 +12,7 @@ export function formatDate(date: string | Date) {
 }
 
 export function formatDateTime(date: string | Date) {
-  return format(new Date(date), "d MMM yyyy HH:mm", { locale: th });
+  return format(new Date(date), "d MMM yyyy HH:mm 'น.'", { locale: th });
 }
 
 export function formatMonthYear(date: string | Date) {

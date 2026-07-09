@@ -163,6 +163,11 @@ CREATE POLICY "Accounting can update all requests" ON public.expense_requests
     )
   );
 
+CREATE POLICY "Employees can archive own transferred requests" ON public.expense_requests
+  FOR UPDATE USING (
+    auth.uid() = employee_id AND status = 'transferred'
+  );
+
 -- ============================================================
 -- STORAGE BUCKET
 -- ============================================================

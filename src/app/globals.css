@@ -28,6 +28,6 @@
     @apply bg-white rounded-xl shadow-sm border border-slate-200;
   }
   .badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+    @apply inline-flex items-center whitespace-nowrap px-2.5 py-0.5 rounded-full text-xs font-medium;
   }
 }
