@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
@@ -11,10 +12,8 @@ export default async function EmployeeRequestDetail({
 }: {
   params: { id: string };
 }) {
+  const user = await getAuthUser();
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const { data: req } = await supabase
     .from("expense_requests")

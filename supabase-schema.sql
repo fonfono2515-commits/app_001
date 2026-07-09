@@ -77,6 +77,10 @@ CREATE TABLE IF NOT EXISTS public.expense_requests (
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+CREATE INDEX IF NOT EXISTS idx_expense_requests_employee_id ON public.expense_requests(employee_id);
+CREATE INDEX IF NOT EXISTS idx_expense_requests_status ON public.expense_requests(status);
+CREATE INDEX IF NOT EXISTS idx_expense_requests_created_at ON public.expense_requests(created_at DESC);
+
 -- Auto-update updated_at
 CREATE OR REPLACE FUNCTION public.handle_updated_at()
 RETURNS TRIGGER AS $$

@@ -1,5 +1,5 @@
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { getCurrentProfile } from "@/lib/supabase/auth";
 import { Navbar } from "@/components/ui/Navbar";
 import type { Profile } from "@/types";
 
@@ -8,20 +8,12 @@ export default async function EmployeeLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const profile = await getCurrentProfile();
 
-  if (!user) redirect("/login");
-
-  const { data: profile } = await supabase
-    .from("profiles")
-    .select("*")
-    .eq("id", user.id)
-    .single();
-
-  if (!profile || profile.role !== "employee") redirect("/login");
+  if (!profile) redirect("/login");
+  if (profile.role !== "employee") {
+    redirect(profile.role === "accounting" ? "/accounting/dashboard" : "/login");
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">

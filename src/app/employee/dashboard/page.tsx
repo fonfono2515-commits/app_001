@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getAuthUser } from "@/lib/supabase/auth";
 import Link from "next/link";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -45,10 +46,8 @@ function RequestRow({ req, showArchive }: { req: ExpenseRequest; showArchive?: b
 }
 
 export default async function EmployeeDashboard() {
+  const user = await getAuthUser();
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const { data: requests } = await supabase
     .from("expense_requests")

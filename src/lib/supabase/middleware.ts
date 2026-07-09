@@ -53,25 +53,5 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
-  if (user) {
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profile?.role === "employee" && pathname.startsWith("/accounting")) {
-      url.pathname = "/employee/dashboard";
-      return NextResponse.redirect(url);
-    }
-    if (
-      profile?.role === "accounting" &&
-      pathname.startsWith("/employee")
-    ) {
-      url.pathname = "/accounting/dashboard";
-      return NextResponse.redirect(url);
-    }
-  }
-
   return supabaseResponse;
 }
