@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getAuthUser } from "@/lib/supabase/auth";
 import Link from "next/link";
-import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
+import { formatDateTime, formatCurrency } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { ExportExcelButton } from "@/components/employee/ExportExcelButton";
 import { ArchiveCheckbox } from "@/components/employee/ArchiveCheckbox";
@@ -28,7 +28,7 @@ function RequestRow({ req, showArchive }: { req: ExpenseRequest; showArchive?: b
         <div className="min-w-0">
           <p className="font-medium text-slate-900 text-sm sm:text-base break-words">{req.title}</p>
           <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
-            {req.category?.name} • {req.topic?.name} • {formatDate(req.expense_date)}
+            {req.category?.name} • {req.topic?.name}
           </p>
           <p className="text-xs text-slate-400 mt-1">สร้างเมื่อ {formatDateTime(req.created_at)}</p>
           {req.transferred_at && (
