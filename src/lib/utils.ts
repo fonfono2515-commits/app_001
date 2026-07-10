@@ -7,6 +7,10 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function isPdfUrl(url: string) {
+  return url.toLowerCase().split("?")[0].endsWith(".pdf");
+}
+
 export function formatDate(date: string | Date) {
   return format(new Date(date), "d MMM yyyy", { locale: th });
 }

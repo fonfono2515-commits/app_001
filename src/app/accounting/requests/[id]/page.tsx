@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { formatDate, formatDateTime, formatCurrency } from "@/lib/utils";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { ZoomableImage } from "@/components/ui/ZoomableImage";
 import { RequestActions } from "@/components/accounting/RequestActions";
 import type { ExpenseRequest, ExpenseCategory, ExpenseTopic } from "@/types";
 
@@ -98,13 +99,12 @@ export default async function AccountingRequestDetail({
           <h3 className="font-semibold text-slate-900 mb-3">สลิปที่แนบ (พนักงาน)</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {request.slip_urls.map((url, i) => (
-              <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                <img
-                  src={url}
-                  alt={`expense slip ${i + 1}`}
-                  className="rounded-lg max-h-48 object-contain w-full cursor-zoom-in hover:opacity-90 transition-opacity"
-                />
-              </a>
+              <ZoomableImage
+                key={i}
+                src={url}
+                alt={`expense slip ${i + 1}`}
+                className="rounded-lg max-h-48 object-contain w-full"
+              />
             ))}
           </div>
           <p className="text-xs text-slate-400 mt-2 text-center">คลิกที่รูปเพื่อดูขนาดเต็ม</p>
@@ -121,13 +121,12 @@ export default async function AccountingRequestDetail({
           </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {request.transfer_slip_urls.map((url, i) => (
-              <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                <img
-                  src={url}
-                  alt={`transfer slip ${i + 1}`}
-                  className="rounded-lg max-h-48 object-contain w-full cursor-zoom-in hover:opacity-90 transition-opacity"
-                />
-              </a>
+              <ZoomableImage
+                key={i}
+                src={url}
+                alt={`transfer slip ${i + 1}`}
+                className="rounded-lg max-h-48 object-contain w-full"
+              />
             ))}
           </div>
           <p className="text-xs text-slate-400 mt-2 text-center">คลิกที่รูปเพื่อดูขนาดเต็ม</p>
