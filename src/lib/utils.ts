@@ -1,7 +1,8 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
-import { format } from "date-fns";
-import { th } from "date-fns/locale";
+
+const BANGKOK_TZ = "Asia/Bangkok";
+const BANGKOK_LOCALE = "th-TH-u-ca-gregory";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -12,15 +13,30 @@ export function isPdfUrl(url: string) {
 }
 
 export function formatDate(date: string | Date) {
-  return format(new Date(date), "d MMM yyyy", { locale: th });
+  return new Intl.DateTimeFormat(BANGKOK_LOCALE, {
+    timeZone: BANGKOK_TZ,
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date(date));
 }
 
 export function formatDateTime(date: string | Date) {
-  return format(new Date(date), "d MMM yyyy HH:mm 'น.'", { locale: th });
+  const time = new Intl.DateTimeFormat(BANGKOK_LOCALE, {
+    timeZone: BANGKOK_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(date));
+  return `${formatDate(date)} ${time} น.`;
 }
 
 export function formatMonthYear(date: string | Date) {
-  return format(new Date(date), "MMMM yyyy", { locale: th });
+  return new Intl.DateTimeFormat(BANGKOK_LOCALE, {
+    timeZone: BANGKOK_TZ,
+    month: "long",
+    year: "numeric",
+  }).format(new Date(date));
 }
 
 export function formatCurrency(amount: number) {
