@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ImageUpload } from "@/components/ui/ImageUpload";
 import { isPdfUrl } from "@/lib/utils";
-import type { ExpenseRequest, ExpenseCategory, ExpenseTopic, ExpenseStatus } from "@/types";
+import type { ExpenseRequest, ExpenseCategory, ExpenseTopic, ExpenseStatus, Company } from "@/types";
 
 interface RequestActionsProps {
   request: ExpenseRequest;
@@ -36,6 +36,7 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
   const [editNotes, setEditNotes] = useState(request.notes || "");
   const [editSlipUrls, setEditSlipUrls] = useState<string[]>(request.slip_urls || []);
   const [editNewFiles, setEditNewFiles] = useState<File[]>([]);
+  const [editCompany, setEditCompany] = useState<Company | "">(request.company || "");
 
   if (request.status === "rejected") return null;
   if (request.status === "transferred" && request.archived_at) return null;
@@ -51,6 +52,7 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
     setEditNotes(request.notes || "");
     setEditSlipUrls(request.slip_urls || []);
     setEditNewFiles([]);
+    setEditCompany(request.company || "");
     setError("");
     setShowEditForm(true);
   }
@@ -169,6 +171,10 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
       setError("กรุณากรอกหัวข้อ จำนวนเงิน และวันที่ให้ครบถ้วน");
       return;
     }
+    if (!editCompany) {
+      setError("กรุณาเลือกบริษัทที่เบิก");
+      return;
+    }
     setLoading(true);
     setError("");
     const supabase = createClient();
@@ -204,6 +210,7 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
         amount: parseFloat(editAmount),
         expense_date: editDate,
         notes: editNotes || null,
+        company: editCompany || null,
         slip_urls: finalSlipUrls,
       })
       .eq("id", request.id);
@@ -359,6 +366,36 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
                   <option key={c.id} value={c.id}>{c.name}</option>
                 ))}
               </select>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-1">
+              เบิกในนามบริษัท <span className="text-red-500">*</span>
+            </label>
+            <div className="flex gap-3">
+              <button
+                type="button"
+                onClick={() => setEditCompany("ODF")}
+                className={`flex-1 px-4 py-2 rounded-lg font-medium border-2 transition-colors ${
+                  editCompany === "ODF"
+                    ? "bg-emerald-600 border-emerald-600 text-white"
+                    : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:border-emerald-400"
+                }`}
+              >
+                ODF
+              </button>
+              <button
+                type="button"
+                onClick={() => setEditCompany("TR")}
+                className={`flex-1 px-4 py-2 rounded-lg font-medium border-2 transition-colors ${
+                  editCompany === "TR"
+                    ? "bg-sky-600 border-sky-600 text-white"
+                    : "bg-sky-50 border-sky-200 text-sky-700 hover:border-sky-400"
+                }`}
+              >
+                TR
+              </button>
             </div>
           </div>
 
