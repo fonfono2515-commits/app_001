@@ -1,5 +1,7 @@
 export type UserRole = "employee" | "accounting";
 
+export type Company = "ODF" | "TR";
+
 export type ExpenseStatus =
   | "pending"
   | "reviewing"
@@ -45,6 +47,7 @@ export interface ExpenseRequest {
   expense_date: string;
   slip_urls?: string[];
   notes?: string;
+  company?: Company;
   status: ExpenseStatus;
   reviewed_by?: string;
   reviewer?: Profile;

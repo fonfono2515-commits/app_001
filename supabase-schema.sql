@@ -63,6 +63,7 @@ CREATE TABLE IF NOT EXISTS public.expense_requests (
   expense_date DATE NOT NULL,
   slip_urls TEXT[],
   notes TEXT,
+  company TEXT CHECK (company IN ('ODF', 'TR')),
   status TEXT NOT NULL DEFAULT 'pending'
     CHECK (status IN ('pending', 'reviewing', 'approved', 'transferred', 'rejected')),
   reviewed_by UUID REFERENCES public.profiles(id) ON DELETE SET NULL,

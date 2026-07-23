@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { ImageUpload } from "@/components/ui/ImageUpload";
-import type { ExpenseTopic, ExpenseCategory } from "@/types";
+import type { ExpenseTopic, ExpenseCategory, Company } from "@/types";
 
 export default function CreateExpensePage() {
   const router = useRouter();
@@ -21,6 +21,7 @@ export default function CreateExpensePage() {
     amount: "",
     expense_date: new Date().toISOString().split("T")[0],
     notes: "",
+    company: "" as Company | "",
   });
 
   useEffect(() => {
@@ -49,6 +50,10 @@ export default function CreateExpensePage() {
     e.preventDefault();
     if (slipFiles.length === 0) {
       setError("กรุณาอัปโหลดสลิปการโอน");
+      return;
+    }
+    if (!form.company) {
+      setError("กรุณาเลือกบริษัทที่เบิก");
       return;
     }
     setLoading(true);
@@ -90,6 +95,7 @@ export default function CreateExpensePage() {
       expense_date: form.expense_date,
       slip_urls: publicUrls,
       notes: form.notes || null,
+      company: form.company || null,
       status: "pending",
     });
 
@@ -165,6 +171,36 @@ export default function CreateExpensePage() {
                 </option>
               ))}
             </select>
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            เบิกในนามบริษัท <span className="text-red-500">*</span>
+          </label>
+          <div className="flex gap-3">
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, company: "ODF" }))}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium border-2 transition-colors ${
+                form.company === "ODF"
+                  ? "bg-emerald-600 border-emerald-600 text-white"
+                  : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:border-emerald-400"
+              }`}
+            >
+              ODF
+            </button>
+            <button
+              type="button"
+              onClick={() => setForm((f) => ({ ...f, company: "TR" }))}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium border-2 transition-colors ${
+                form.company === "TR"
+                  ? "bg-sky-600 border-sky-600 text-white"
+                  : "bg-sky-50 border-sky-200 text-sky-700 hover:border-sky-400"
+              }`}
+            >
+              TR
+            </button>
           </div>
         </div>
 

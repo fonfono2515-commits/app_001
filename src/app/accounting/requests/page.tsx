@@ -33,6 +33,7 @@ export default function AccountingRequestsPage() {
     search: "",
     status: "",
     category_id: "",
+    company: "",
     date_from: "",
     date_to: "",
   });
@@ -55,6 +56,7 @@ export default function AccountingRequestsPage() {
       if (filters.status) query = query.eq("status", filters.status);
     }
     if (filters.category_id) query = query.eq("category_id", filters.category_id);
+    if (filters.company) query = query.eq("company", filters.company);
     if (filters.date_from) query = query.gte("expense_date", filters.date_from);
     if (filters.date_to) query = query.lte("expense_date", filters.date_to);
     if (filters.search) {
@@ -92,6 +94,7 @@ export default function AccountingRequestsPage() {
       .order("created_at", { ascending: false });
 
     if (filters.category_id) query = query.eq("category_id", filters.category_id);
+    if (filters.company) query = query.eq("company", filters.company);
     if (filters.date_from) query = query.gte("expense_date", filters.date_from);
     if (filters.date_to) query = query.lte("expense_date", filters.date_to);
     if (filters.search) {
@@ -116,7 +119,7 @@ export default function AccountingRequestsPage() {
 
     const headerFill = { patternType: "solid", fgColor: { rgb: "E2E8F0" } };
     const border = { top: { style: "thin" }, bottom: { style: "thin" }, left: { style: "thin" }, right: { style: "thin" } };
-    const cols = ["A", "B", "C", "D", "E", "F", "G"];
+    const cols = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
     const wsData: (string | number)[][] = [];
     const titleRows: { row: number; color: string }[] = [];
@@ -131,21 +134,21 @@ export default function AccountingRequestsPage() {
       const groupTotal = items.reduce((s, r) => s + r.amount, 0);
 
       titleRows.push({ row: wsData.length, color: group.color });
-      wsData.push([`สรุปข้อมูลสำรองจ่ายประจำเดือน ${monthLabel} (${group.label})`, "", "", "", "", "", ""]);
+      wsData.push([`สรุปข้อมูลสำรองจ่ายประจำเดือน ${monthLabel} (${group.label})`, "", "", "", "", "", "", ""]);
 
       headerRows.push(wsData.length);
-      wsData.push(["ลำดับ", "วันที่", "วันที่โอน", "พนักงาน", "รายการ", "ประเภทค่าใช้จ่าย", "จำนวนเงินรวม"]);
+      wsData.push(["ลำดับ", "วันที่", "วันที่โอน", "พนักงาน", "บริษัท", "รายการ", "ประเภทค่าใช้จ่าย", "จำนวนเงินรวม"]);
 
       oldestFirst.forEach((r, i) => {
         dataRows.push({ row: wsData.length, empName: r.employee?.full_name || "" });
         const transferDate = r.transferred_at ? formatDate(r.transferred_at) : "-";
-        wsData.push([i + 1, formatDate(r.expense_date), transferDate, r.employee?.full_name || "", r.title, r.category?.name || "", r.amount]);
+        wsData.push([i + 1, formatDate(r.expense_date), transferDate, r.employee?.full_name || "", r.company || "-", r.title, r.category?.name || "", r.amount]);
       });
 
       summaryRows.push(wsData.length);
-      wsData.push(["", "", "", "", "", "รวมทั้งสิ้น", groupTotal]);
+      wsData.push(["", "", "", "", "", "", "รวมทั้งสิ้น", groupTotal]);
 
-      wsData.push(["", "", "", "", "", "", ""]);
+      wsData.push(["", "", "", "", "", "", "", ""]);
     });
 
     const ws = XLSX.utils.aoa_to_sheet(wsData);
@@ -173,7 +176,7 @@ export default function AccountingRequestsPage() {
         cell.s = c === "D"
           ? { font: { bold: true, color: { rgb: empColor } }, border }
           : { border };
-        if (c === "G") cell.z = "#,##0.00";
+        if (c === "H") cell.z = "#,##0.00";
       });
     });
 
@@ -183,12 +186,12 @@ export default function AccountingRequestsPage() {
         const cell = ws[`${c}${row}`];
         if (!cell) return;
         cell.s = { font: { bold: true }, border };
-        if (c === "G") cell.z = "#,##0.00";
+        if (c === "H") cell.z = "#,##0.00";
       });
     });
 
-    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 40 }, { wch: 20 }, { wch: 14 }];
-    ws["!merges"] = titleRows.map(({ row: r }) => ({ s: { r, c: 0 }, e: { r, c: 6 } }));
+    ws["!cols"] = [{ wch: 6 }, { wch: 12 }, { wch: 12 }, { wch: 16 }, { wch: 8 }, { wch: 40 }, { wch: 20 }, { wch: 14 }];
+    ws["!merges"] = titleRows.map(({ row: r }) => ({ s: { r, c: 0 }, e: { r, c: 7 } }));
 
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "รายงาน");
@@ -282,6 +285,15 @@ export default function AccountingRequestsPage() {
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
+          <select
+            value={filters.company}
+            onChange={(e) => setFilters((f) => ({ ...f, company: e.target.value }))}
+            className="input-field w-32"
+          >
+            <option value="">ทุกบริษัท</option>
+            <option value="ODF">ODF</option>
+            <option value="TR">TR</option>
+          </select>
         </div>
         <div className="flex flex-wrap gap-3 items-center">
           <div className="flex items-center gap-2 text-sm text-slate-600">
@@ -301,7 +313,7 @@ export default function AccountingRequestsPage() {
             />
           </div>
           <button
-            onClick={() => setFilters({ search: "", status: "", category_id: "", date_from: "", date_to: "" })}
+            onClick={() => setFilters({ search: "", status: "", category_id: "", company: "", date_from: "", date_to: "" })}
             className="text-sm text-slate-500 hover:text-slate-700 underline"
           >
             ล้างตัวกรอง
@@ -340,6 +352,7 @@ export default function AccountingRequestsPage() {
                   <th className="text-left px-4 py-3 text-slate-600 font-medium">หัวข้อ</th>
                   <th className="text-left px-4 py-3 text-slate-600 font-medium">พนักงาน</th>
                   <th className="text-left px-4 py-3 text-slate-600 font-medium">ประเภท</th>
+                  <th className="text-center px-4 py-3 text-slate-600 font-medium">บริษัท</th>
                   <th className="text-left px-4 py-3 text-slate-600 font-medium">วันที่</th>
                   <th className="text-right px-4 py-3 text-slate-600 font-medium">จำนวน</th>
                   <th className="text-center px-4 py-3 text-slate-600 font-medium">สถานะ</th>
@@ -362,6 +375,15 @@ export default function AccountingRequestsPage() {
                         />
                         <span className="text-slate-700">{req.category?.name || "-"}</span>
                       </div>
+                    </td>
+                    <td className="px-4 py-3 text-center">
+                      {req.company ? (
+                        <span className={`badge ${req.company === "ODF" ? "bg-emerald-100 text-emerald-800" : "bg-sky-100 text-sky-800"}`}>
+                          {req.company}
+                        </span>
+                      ) : (
+                        <span className="text-slate-300">-</span>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-slate-700">{formatDate(req.expense_date)}</td>
                     <td className="px-4 py-3 text-right font-semibold text-slate-900">
