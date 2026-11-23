@@ -38,8 +38,37 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
   const [editNewFiles, setEditNewFiles] = useState<File[]>([]);
   const [editCompany, setEditCompany] = useState<Company | "">(request.company || "");
 
-  if (request.status === "rejected") return null;
   if (request.status === "transferred" && request.archived_at) return null;
+
+  if (request.status === "rejected") {
+    return (
+      <div className="card p-5 space-y-4">
+        <h3 className="font-semibold text-slate-900">จัดการรายการ</h3>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+            {error}
+          </div>
+        )}
+        <p className="text-sm text-slate-600">
+          รายการนี้ถูกปฏิเสธแล้ว หากกดปฏิเสธผิด สามารถดึงกลับมาเป็นสถานะ &quot;กำลังตรวจสอบ&quot; เพื่อแก้ไขต่อได้
+        </p>
+        <button
+          onClick={() => {
+            if (window.confirm("ต้องการยกเลิกการปฏิเสธ และดึงรายการนี้กลับมาตรวจสอบใช่หรือไม่?")) {
+              updateStatus("reviewing");
+            }
+          }}
+          disabled={loading}
+          className="btn-secondary flex items-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+          </svg>
+          {loading ? "กำลังบันทึก..." : "ยกเลิกการปฏิเสธ (ดึงกลับมาแก้ไข)"}
+        </button>
+      </div>
+    );
+  }
 
   const isTransferred = request.status === "transferred";
 
@@ -297,7 +326,11 @@ export function RequestActions({ request, categories, topics }: RequestActionsPr
                 อนุมัติ
               </button>
               <button
-                onClick={() => updateStatus("rejected")}
+                onClick={() => {
+                  if (window.confirm("ยืนยันการปฏิเสธรายการนี้ใช่หรือไม่?")) {
+                    updateStatus("rejected");
+                  }
+                }}
                 disabled={loading}
                 className="btn-danger flex items-center gap-2"
               >
